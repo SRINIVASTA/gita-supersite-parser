@@ -1,82 +1,10 @@
-def generate_audio_highlighter(v_uid, highlight_color):
-    """
-    Standalone function to completely prevent f-string bracket or 
-    HTML indentation compilation errors in deep loops.
-    """
-    html_payload = """
-    <div style="font-family: 'Segoe UI', sans-serif; margin-top: 15px; background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
-        <p style='margin: 0 0 10px 0; font-size: 0.9rem; font-weight: 600; color: #475569;'>🗣️ Active Script Screen Reader & Word Highlighter Dashboard:</p>
-        
-        <script>
-        function runHighlightSpeech(prefix_id, lang_code, speed_rate, highlight_color) {
-            if (!window.parent || !window.parent.speechSynthesis) return;
-            
-            window.parent.speechSynthesis.cancel();
-            let wordSpans = window.parent.document.querySelectorAll("[id^='" + prefix_id + "_']");
-            wordSpans.forEach(s => s.style.backgroundColor = "transparent");
-            
-            let wordsArray = [];
-            wordSpans.forEach(span => {
-                wordsArray.push((span.innerText || span.textContent).trim());
-            });
-            let completeSentence = wordsArray.join(' ');
-            if (completeSentence.length === 0) return;
-            
-            let utterance = new window.parent.SpeechSynthesisUtterance(completeSentence);
-            utterance.rate = speed_rate;
-            
-            if (lang_code === 'hi') utterance.lang = 'hi-IN';
-            else if (lang_code === 'te') utterance.lang = 'te-IN';
-            else utterance.lang = 'en-US';
-            
-            utterance.onboundary = function(event) {
-                if (event.name === 'word') {
-                    let spokenTextPart = event.target.text.substring(0, event.charIndex).trim();
-                    let currentWordIdx = spokenTextPart ? spokenTextPart.split(/\\s+/).length : 0;
-                    
-                    wordSpans.forEach(s => s.style.backgroundColor = "transparent");
-                    let activeSpan = window.parent.document.getElementById(prefix_id + "_" + currentWordIdx);
-                    if (activeSpan) {
-                        activeSpan.style.backgroundColor = highlight_color;
-                        activeSpan.style.borderRadius = "4px";
-                        activeSpan.style.padding = "2px 4px";
-                    }
-                }
-            };
-            
-            utterance.onend = function() {
-                wordSpans.forEach(s => s.style.backgroundColor = "transparent");
-            };
-            utterance.onerror = function() {
-                wordSpans.forEach(s => s.style.backgroundColor = "transparent");
-            };
-            
-            window.parent.speechSynthesis.speak(utterance);
-        }
-        
-        function killActiveSpeech() {
-            if (window.parent && window.parent.speechSynthesis) {
-                window.parent.speechSynthesis.cancel();
-                let allSpansGlobal = window.parent.document.querySelectorAll("span");
-                allSpansGlobal.forEach(s => s.style.backgroundColor = "transparent");
-            }
-        }
-        </script>
-        
-        <button onclick="runHighlightSpeech('san_V_UID', 'hi', 0.80, '#ffebd5')" style="padding: 8px 14px; background-color: #ff9933; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">🕉️ Read Sanskrit Text</button>
-        <button onclick="runHighlightSpeech('tel_V_UID', 'te', 0.80, '#dcfce7')" style="padding: 8px 14px; background-color: #00a000; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">🏹 Read Telugu Text</button>
-        <button onclick="runHighlightSpeech('eng_V_UID', 'en', 0.90, '#e0e7ff')" style="padding: 8px 14px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size:0.85rem;">🇬🇧 Read English Text</button>
-        <button onclick="killActiveSpeech()" style="padding: 8px 14px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-left: 20px; font-size:0.85rem;">🛑 Stop Audio</button>
-    </div>
-    """
-    return html_payload.replace("V_UID", v_uid)
-
-
 import streamlit as st
 import json
 import re
+import io
 import pandas as pd
 import plotly.express as px
+from gtts import gTTS
 
 # Import your standalone data engine from pipeline.py safely
 try:
@@ -86,7 +14,7 @@ except ImportError:
         def __init__(self, text): self.raw_input = text
         def run_parser_pipeline(self): return {"metadata": {"status": "Fallback"}, "verses": []}
 
-# --- Streamlit Global Settings ---
+# --- Streamlit Global Settings Configuration ---
 st.set_page_config(page_title="IITK Indic Enterprise Suite", layout="wide", page_icon="🕉️")
 
 # Initialize Serverless Database logs in background cache state safely
@@ -108,13 +36,15 @@ st.markdown("""
         background-color: #4f46e5 !important; color: white !important; border: none !important; padding: 12px 0px !important;
     }
     .stButton>button:hover { background-color: #4338ca !important; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3); }
-    .search-card { border-left: 5px solid #4f46e5; background-color: #f1f5f9; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
+    .search-card { border-left: 5px solid #4f46e5; background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
     .nlp-pill { background-color: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; display: inline-block; margin: 4px; }
+    .highlight-san { background-color: #ffebd5; padding: 4px 8px; border-radius: 6px; font-weight: 600; border: 1px solid #fed7aa; display: block; margin: 4px 0; }
+    .highlight-tel { background-color: #dcfce7; padding: 4px 8px; border-radius: 6px; font-weight: 600; border: 1px solid #bbf7d0; display: block; margin: 4px 0; }
+    .highlight-eng { background-color: #e0e7ff; padding: 4px 8px; border-radius: 6px; font-weight: 600; border: 1px solid #c7d2fe; display: block; margin: 4px 0; }
     </style>
 """, unsafe_allow_html=True)
 # --- ADVANCED INTERNAL NLP ENGINE LAYER ---
 class SanskritNLPSplitter:
-    """Automated linguistic rule compiler for complex Sanskrit Sandhi split matrix lookups."""
     @staticmethod
     def break_compounds(token):
         rules = [
@@ -130,16 +60,26 @@ class SanskritNLPSplitter:
             if match:
                 results = []
                 for rep in replacements:
-                    if rep.startswith(r'\1'):
-                        results.append(match.group(1) + rep[2:])
-                    elif rep.startswith(r'\2'):
-                        results.append(match.group(2))
-                    else:
-                        results.append(rep)
+                    if rep.startswith(r'\1'): results.append(match.group(1) + rep[2:])
+                    elif rep.startswith(r'\2'): results.append(match.group(2))
+                    else: results.append(rep)
                 return [r for r in results if r]
         return [token]
 
-# --- SECURITY GATEWAY LAYOUT ---
+# --- BACKEND TELEMETRY AUDIO GENERATION LAYER ---
+@st.cache_data(show_spinner=False)
+def generate_backend_tts(text_string, language_code):
+    """Serverless container speech processor. Prevents all CORS browser blockades."""
+    try:
+        clean_text = re.sub(r'[।॥\?\!\.\,\(\)\[\]]+', ' ', text_string).strip()
+        tts = gTTS(text=clean_text, lang=language_code, slow=False)
+        audio_fp = io.BytesIO()
+        tts.write_to_fp(audio_fp)
+        audio_fp.seek(0)
+        return audio_fp.read()
+    except Exception:
+        return None
+# --- SECURITY SYSTEM CONTROL BAR GATEWAY ---
 if not st.session_state['authenticated']:
     st.markdown("<br><br>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns([1, 1.5, 1])
@@ -155,7 +95,7 @@ if not st.session_state['authenticated']:
             else:
                 st.error("❌ Access Denied: Security authentication token signature mismatch.")
     st.stop()
-# --- MAIN APPLICATION WORKSPACE (Authenticated State) ---
+# --- MAIN WORKSPACE WORKFLOW ---
 st.sidebar.markdown(f"### 👤 Active Session: Scholar User")
 if st.sidebar.button("🔒 Terminate Secure Session"):
     st.session_state['authenticated'] = False
@@ -214,12 +154,10 @@ if st.session_state.get('pipeline_executed', False):
     df = pd.DataFrame([{"Verse": v["verse_id"], "Chapter": f"Chapter {v['chapter']}", "Words": v["analytics"]["word_count"]} for v in verses])
     viz_col1, viz_col2 = st.columns(2)
     with viz_col1:
-        st.markdown("##### Word Count Breakdown per Verse (Hover for details)")
         fig1 = px.bar(df, x="Verse", y="Words", color="Chapter", labels={"Words": "Sanskrit Word Count", "Verse": "Verse ID Reference"}, color_discrete_sequence=px.colors.qualitative.Prism)
         fig1.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=350, plot_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig1, use_container_width=True)
     with viz_col2:
-        st.markdown("##### Cumulative Text Weight per Chapter Distribution")
         fig2 = px.pie(df, values="Words", names="Chapter", hole=0.4, color_discrete_sequence=px.colors.qualitative.Safe)
         fig2.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=350)
         st.plotly_chart(fig2, use_container_width=True)
@@ -245,8 +183,10 @@ if st.session_state.get('pipeline_executed', False):
             filtered_output = {"metadata": clean_json_output["metadata"], "verses": filtered_verses}
         else: filtered_output = clean_json_output; filtered_verses = verses
     else: filtered_output = clean_json_output; filtered_verses = verses
+    
     st.markdown("<br>", unsafe_allow_html=True)
-    tab1, tab2, tab3 = st.tabs(["📊 Interactive JSON Output", "🔎 Multi-Script Search Engine & Audio Reader", "📝 Checked Source Log"])
+    tab1, tab2, tab3 = st.tabs(["📊 Interactive JSON Output", "🔎 Multi-Script Search Engine & Audio Studio", "📝 Checked Source Log"])
+    
     with tab1:
         st.markdown(f"### Schema-Validated Dataset Result ({filter_choice})")
         st.json(filtered_output)
@@ -274,97 +214,50 @@ if st.session_state.get('pipeline_executed', False):
                 t_txt = v["linguistic_layers"]["telugu_script"].lower()
                 e_txt = v["translations"]["english_translation"].lower()
                 if search_query in s_txt or search_query in t_txt or search_query in e_txt: results_found.append(v)
+                
             if results_found:
                 st.success(f"🎯 Found {len(results_found)} matching verse entries:")
                 for match_v in results_found:
                     v_uid = match_v['verse_id']
-                    san_words = match_v['linguistic_layers']['devanagari_sanskrit'].split(' ')
-                    tel_words = match_v['linguistic_layers']['telugu_script'].split(' ')
-                    eng_words = match_v['translations']['english_translation'].split(' ')
-                    san_spans = " ".join([f'<span id="san_{v_uid}_{w_idx}">{word}</span>' for w_idx, word in enumerate(san_words)])
-                    tel_spans = " ".join([f'<span id="tel_{v_uid}_{w_idx}">{word}</span>' for w_idx, word in enumerate(tel_words)])
-                    eng_spans = " ".join([f'<span id="eng_{v_uid}_{w_idx}">{word}</span>' for w_idx, word in enumerate(eng_words)])
-                    st.markdown(f'<div class="search-card"><h4>📌 Verse ID: {match_v["verse_id"]}</h4><p><b>Sanskrit:</b> <span id="master_san_{v_uid}">{san_spans}</span></p><p><b>Telugu:</b> <span id="master_tel_{v_uid}">{tel_spans}</span></p><p><b>English:</b> <span id="master_eng_{v_uid}">{eng_spans}</span></p></div>', unsafe_allow_html=True)
+                    san_raw = match_v['linguistic_layers']['devanagari_sanskrit']
+                    tel_raw = match_v['linguistic_layers']['telugu_script']
+                    eng_raw = match_v['translations']['english_translation']
+                    
+                    audio_selection = st.radio(
+                        f"Select Audio Language Target Layer for Verse {v_uid}:",
+                        options=["None", "Sanskrit (hi)", "Telugu (te)", "English (en)"],
+                        key=f"audio_select_{v_uid}"
+                    )
+                    
+                    san_display = f'<span class="highlight-san">{san_raw}</span>' if audio_selection == "Sanskrit (hi)" else san_raw
+                    tel_display = f'<span class="highlight-tel">{tel_raw}</span>' if audio_selection == "Telugu (te)" else tel_raw
+                    eng_display = f'<span class="highlight-eng">{eng_raw}</span>' if audio_selection == "English (en)" else eng_raw
+                    
+                    st.markdown(f"""
+                    <div class="search-card">
+                        <h4>📌 Verse ID: {v_uid} (Chapter {match_v['chapter']}, Verse {match_v['verse_number']})</h4>
+                        <p><b>Sanskrit:</b> {san_display}</p>
+                        <p><b>Telugu:</b> {tel_display}</p>
+                        <p><b>English:</b> {eng_display}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    if audio_selection == "Sanskrit (hi)":
+                        audio_data = generate_backend_tts(san_raw, "hi")
+                        if audio_data: st.audio(audio_data, format="audio/mp3", autoplay=True)
+                    elif audio_selection == "Telugu (te)":
+                        audio_data = generate_backend_tts(tel_raw, "te")
+                        if audio_data: st.audio(audio_data, format="audio/mp3", autoplay=True)
+                    elif audio_selection == "English (en)":
+                        audio_data = generate_backend_tts(eng_raw, "en")
+                        if audio_data: st.audio(audio_data, format="audio/mp3", autoplay=True)
                     
                     st.markdown("##### 🧬 Deep NLP Compound Morphological Splitting:")
-                    raw_tokens = re.sub(r'[।॥\s]+', ' ', match_v['linguistic_layers']['devanagari_sanskrit']).strip().split(' ')
+                    raw_tokens = re.sub(r'[।॥\s]+', ' ', san_raw).strip().split(' ')
                     for tok in raw_tokens:
                         splits = SanskritNLPSplitter.break_compounds(tok)
                         if len(splits) > 1: st.markdown(f"• Compound **`{tok}`** splits into: " + " ".join([f"<span class='nlp-pill'>{s}</span>" for s in splits]), unsafe_allow_html=True)
-                    
-                    raw_html_payload = """
-                    <div style="font-family: 'Segoe UI', sans-serif; margin-top: 15px; background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <p style='margin: 0 0 10px 0; font-size: 0.9rem; font-weight: 600; color: #475569;'>🗣️ Active Script Screen Reader & Word Highlighter Dashboard:</p>
-                        <script>
-                        if (typeof window.activeSpeechTimers === 'undefined') { window.activeSpeechTimers = {}; }
-                        function runHighlightSpeech(prefix_id, lang_code, speed_rate, highlight_color) {
-                            if (!window.parent) return;
-                            if (window.activeSpeechTimers[prefix_id]) { clearInterval(window.activeSpeechTimers[prefix_id]); }
-                            if (window.parent.speechSynthesis) window.parent.speechSynthesis.cancel();
-                            let all_audios = window.parent.document.querySelectorAll('audio');
-                            all_audios.forEach(a => { a.pause(); a.currentTime = 0; });
-                            let allSpansGlobal = window.parent.document.querySelectorAll("span");
-                            allSpansGlobal.forEach(s => s.style.backgroundColor = "transparent");
-                            let wordSpans = window.parent.document.querySelectorAll("[id^='" + prefix_id + "_']");
-                            let wordsArray = [];
-                            wordSpans.forEach(span => {
-                                let cleanTxt = span.innerText || span.textContent;
-                                cleanTxt = cleanTxt.replace(/[।॥\\?\\!\\.\\,\\(\\)\\[\\]]+/g, '').trim();
-                                wordsArray.push(cleanTxt);
-                            });
-                            let completeSentence = wordsArray.join(' ');
-                            if (completeSentence.length === 0) return;
-                            let activeWordIdx = 0;
-                            let msPerWord = 450 / speed_rate;
-                            if (lang_code === 'hi') msPerWord = 560 / speed_rate;
-                            if (lang_code === 'te') msPerWord = 620 / speed_rate;
-                            function triggerWordHighlight() {
-                                if (activeWordIdx < wordSpans.length) {
-                                    wordSpans.forEach(s => s.style.backgroundColor = "transparent");
-                                    let currentSpan = window.parent.document.getElementById(prefix_id + "_" + activeWordIdx);
-                                    if (currentSpan) {
-                                        currentSpan.style.backgroundColor = highlight_color;
-                                        currentSpan.style.borderRadius = "4px";
-                                        currentSpan.style.padding = "2px 4px";
-                                    }
-                                    activeWordIdx++;
-                                } else {
-                                    clearInterval(window.activeSpeechTimers[prefix_id]);
-                                    wordSpans.forEach(s => s.style.backgroundColor = "transparent");
-                                }
-                            }
-                            if (lang_code === 'en') {
-                                let utterance = new window.parent.SpeechSynthesisUtterance(completeSentence);
-                                utterance.lang = 'en-US'; utterance.rate = speed_rate;
-                                utterance.onstart = function() { triggerWordHighlight(); window.activeSpeechTimers[prefix_id] = setInterval(triggerWordHighlight, msPerWord); };
-                                utterance.onend = function() { clearInterval(window.activeSpeechTimers[prefix_id]); wordSpans.forEach(s => s.style.backgroundColor = "transparent"); };
-                                window.parent.speechSynthesis.speak(utterance);
-                            } else {
-                                let encodedText = encodeURIComponent(completeSentence);
-                                let streamerPlayer = document.getElementById("audio_streamer_V_UID_PLACEHOLDER");
-                                streamerPlayer.src = "https://google.com" + lang_code + "&client=tw-ob&q=" + encodedText;
-                                streamerPlayer.onplay = function() { triggerWordHighlight(); window.activeSpeechTimers[prefix_id] = setInterval(triggerWordHighlight, msPerWord); };
-                                streamerPlayer.onended = function() { clearInterval(window.activeSpeechTimers[prefix_id]); wordSpans.forEach(s => s.style.backgroundColor = "transparent"); };
-                                streamerPlayer.play().catch(err => console.log("Streaming error: ", err));
-                            }
-                        }
-                        function killActiveSpeech() {
-                            let keys = Object.keys(window.activeSpeechTimers);
-                            keys.forEach(k => clearInterval(window.activeSpeechTimers[k]));
-                            if (window.parent && window.parent.speechSynthesis) window.parent.speechSynthesis.cancel();
-                            let streamerPlayer = document.getElementById("audio_streamer_V_UID_PLACEHOLDER");
-                            streamerPlayer.pause(); streamerPlayer.currentTime = 0;
-                            let allSpansGlobal = window.parent.document.querySelectorAll("span");
-                            allSpansGlobal.forEach(s => s.style.backgroundColor = "transparent");
-                        }
-                        </script>
-                        <audio id="audio_streamer_V_UID_PLACEHOLDER" crossOrigin="anonymous"></audio>
-                        <button onclick="runHighlightSpeech('san_V_UID_PLACEHOLDER', 'hi', 0.80, '#ffebd5')" style="padding: 8px 14px; background-color: #ff9933; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">🕉️ Read Sanskrit Text</button>
-                        <button onclick="runHighlightSpeech('tel_V_UID_PLACEHOLDER', 'te', 0.75, '#dcfce7')" style="padding: 8px 14px; background-color: #00a000; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">🏹 Read Telugu Text</button>
-                        <button onclick="runHighlightSpeech('eng_V_UID_PLACEHOLDER', 'en', 0.90, '#e0e7ff')" style="padding: 8px 14px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size:0.85rem;">🇬🇧 Read English Text</button>
-                        <button onclick="killActiveSpeech()" style="padding: 8px 14px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-left: 20px; font-size:0.85rem;">🛑 Stop Audio</button>
-                    </div>
-                    """
+                    st.markdown("---")
             else: st.warning("🔍 No matching verses found. Try another vocabulary word.")
         else: st.info("💡 Enter a string value keyword above to filter across your entire structural text database instantaneously.")
             
