@@ -1,3 +1,102 @@
+import streamlit as st
+import json
+import re
+import urllib.request
+
+# Crucial: Import your standalone data engine from pipeline.py
+from pipeline import IndicDataPipeline
+
+# --- Streamlit Configuration Settings ---
+st.set_page_config(page_title="IITK Indic Data Pipeline", layout="wide", page_icon="🕉️")
+
+# --- Custom CSS Styling Layer ---
+st.markdown("""
+    <style>
+    /* Main App Background Normalization */
+    .stApp {
+        background-color: #f8fafc;
+    }
+    /* Header and Title Typography */
+    h1, h2, h3 {
+        color: #0f172a !important;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 700;
+    }
+    /* Structural Card Containers for Options A & B, Metrics, and Alerts */
+    div[data-testid="stColumn"], div[data-testid="element-container"] > div.stAlert {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        padding: 24px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    /* Metric Card Enhancements */
+    div[data-testid="stMetricValue"] {
+        font-size: 2rem !important;
+        font-weight: 700 !important;
+        color: #4f46e5 !important;
+    }
+    div[data-testid="stMetricLabel"] {
+        font-weight: 600 !important;
+        color: #475569 !important;
+    }
+    /* Action Button Adjustments */
+    .stButton>button {
+        width: 100%;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        background-color: #4f46e5 !important;
+        color: white !important;
+        border: none !important;
+        padding: 12px 0px !important;
+        transition: all 0.3s ease;
+    }
+    .stButton>button:hover {
+        background-color: #4338ca !important;
+        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- Streamlit Presentation Layer ---
+st.title("🕉️ IIT Kanpur Git Supersite Data Pipeline")
+st.markdown("Transform unstructured raw file layouts into clean, schema-validated multilingual JSON objects instantaneously.")
+st.markdown("---")
+
+# Layout Split: 2 Independent Columns with Dedicated Card Backgrounds
+col1, col2 = st.columns(2)
+raw_text_data = None
+
+with col1:
+    st.markdown("### 🌐 Option A: Sync from Remote File")
+    github_url = st.text_input(
+        "Enter Plaintext / GitHub Raw URL:",
+        placeholder="https://githubusercontent.com",
+        help="Make sure the URL points to raw text directly (://githubusercontent.com), not the standard HTML view page."
+    )
+    if github_url:
+        try:
+            req = urllib.request.Request(
+                github_url, 
+                headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+            )
+            with urllib.request.urlopen(req) as response:
+                raw_text_data = response.read().decode('utf-8')
+            st.success("✅ Remote file fetched and loaded successfully!")
+        except Exception as e:
+            st.error(f"❌ Failed to stream text file content: {e}")
+
+with col2:
+    st.markdown("### 📁 Option B: Local File Drag & Drop")
+    uploaded_file = st.file_uploader(
+        "Choose your unstructured text file (.txt):", 
+        type=['txt'],
+        help="Upload files directly from your workspace directory disk storage."
+    )
+    if uploaded_file is not None:
+        raw_text_data = uploaded_file.getvalue().decode("utf-8")
+        st.success("✅ Local file verified and uploaded successfully!")
+
 # --- Processing Runtime Layer ---
 if raw_text_data:
     st.markdown("<br>", unsafe_allow_html=True)
