@@ -218,7 +218,7 @@ if st.session_state.get('pipeline_executed', False):
         filtered_verses = verses
 
     st.markdown("<br>", unsafe_allow_html=True)
-    # --- UI Organization Master Tabs ---
+        # --- UI Organization Master Tabs ---
     tab1, tab2, tab3 = st.tabs(["📊 Interactive JSON Output", "🔎 Multi-Script Search Engine & Audio Reader", "📝 Checked Source Log"])
     
     with tab1:
@@ -275,12 +275,21 @@ if st.session_state.get('pipeline_executed', False):
                 for match_v in results_found:
                     v_uid = match_v['verse_id']
                     
+                    # Split sentences into single tracker-span array elements for highlighting tracking loops
+                    san_words = match_v['linguistic_layers']['devanagari_sanskrit'].split(' ')
+                    tel_words = match_v['linguistic_layers']['telugu_script'].split(' ')
+                    eng_words = match_v['translations']['english_translation'].split(' ')
+                    
+                    san_spans = " ".join([f'<span id="san_{v_uid}_{w_idx}">{word}</span>' for w_idx, word in enumerate(san_words)])
+                    tel_spans = " ".join([f'<span id="tel_{v_uid}_{w_idx}">{word}</span>' for w_idx, word in enumerate(tel_words)])
+                    eng_spans = " ".join([f'<span id="eng_{v_uid}_{w_idx}">{word}</span>' for w_idx, word in enumerate(eng_words)])
+                    
                     st.markdown(f"""
                     <div class="search-card">
                         <h4>📌 Verse ID: {match_v['verse_id']} (Chapter {match_v['chapter']}, Verse {match_v['verse_number']})</h4>
-                        <p><b>Sanskrit:</b> <span id="san_text_{v_uid}">{match_v['linguistic_layers']['devanagari_sanskrit']}</span></p>
-                        <p><b>Telugu:</b> <span id="tel_text_{v_uid}">{match_v['linguistic_layers']['telugu_script']}</span></p>
-                        <p><b>English:</b> <span id="eng_text_{v_uid}">{match_v['translations']['english_translation']}</span></p>
+                        <p><b>Sanskrit:</b> <span id="master_san_{v_uid}">{san_spans}</span></p>
+                        <p><b>Telugu:</b> <span id="master_tel_{v_uid}">{tel_spans}</span></p>
+                        <p><b>English:</b> <span id="master_eng_{v_uid}">{eng_spans}</span></p>
                     </div>
                     """, unsafe_allow_html=True)
                     
@@ -291,65 +300,102 @@ if st.session_state.get('pipeline_executed', False):
                         splits = SanskritNLPSplitter.break_compounds(tok)
                         if len(splits) > 1:
                             st.markdown(f"• Compound **`{tok}`** splits into: " + " ".join([f"<span class='nlp-pill'>{s}</span>" for s in splits]), unsafe_allow_html=True)
-                    
-                    # --- 🗣️ DYNAMIC SCREEN-READING NATIVE VOICE AUDIO PLAYER LAYER (CORS & IFrame Fixed for all languages) ---
+                    # --- 🗣️ DYNAMIC REWRITTEN SPEECH HIGHLIGHTER LOGIC MATRIX LAYER ---
                     tts_html = f"""
                     <div style="font-family: 'Segoe UI', sans-serif; margin-top: 15px; background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <p style='margin: 0 0 10px 0; font-size: 0.9rem; font-weight: 600; color: #475569;'>🗣️ Screen-Reader Audio Dashboard (Guaranteed Browser Playback System):</p>
+                        <p style='margin: 0 0 10px 0; font-size: 0.9rem; font-weight: 600; color: #475569;'>🗣️ Active Script Screen Reader & Word Highlighter Dashboard:</p>
                         
                         <script>
-                        function speakLiveScreenText(target_span_id, lang_voice_tag, dynamic_speed) {{
-                            // Force break out of iframe block context and access host browser controller variables
-                            if (!window.parent || !window.parent.speechSynthesis) {{
-                                console.error("Speech Synthesis cannot be reached outside iframe containers.");
-                                return;
-                            }}
+                        function runHighlightSpeech(prefix_id, lang_code, speed_rate, highlight_color) {{
+                            if (!window.parent || !window.parent.speechSynthesis) return;
                             
-                            // Shut down any active voice utterances running on the page layout
                             window.parent.speechSynthesis.cancel();
                             
-                            // Target precise structural text component element
-                            let elementRef = window.parent.document.getElementById(target_span_id);
-                            if (elementRef) {{
-                                let extractedText = elementRef.innerText || elementRef.textContent;
-                                
-                                // Clean up all special structural markers, punctuation symbols, or bracket returns across all languages
-                                let cleanSpeechString = extractedText.replace(/[।॥\\s\\?\\!\\.\\,\\(\\)\\[\\]]+/g, ' ').trim();
-                                
-                                // Instantiate native SpeechUtterance object on top-level parent window container block
-                                let speechObj = new window.parent.SpeechSynthesisUtterance(cleanSpeechString);
-                                speechObj.lang = lang_voice_tag;
-                                speechObj.rate = dynamic_speed;
-                                
-                                // Fire clean audio execution loops natively
-                                window.parent.speechSynthesis.speak(speechObj);
-                            }} else {{
-                                console.error("Linguistic on-screen component target lost reference ID: " + target_span_id);
+                            // Collect text strings cleanly by extracting directly from target span clusters
+                            let wordSpans = window.parent.document.querySelectorAll("[id^='" + prefix_id + "_']");
+                            let textWordsArray = [];
+                            
+                            // Reset any lingering visual canvas highlight marks left behind from previous plays
+                            let allSpansGlobal = window.parent.document.querySelectorAll("span");
+                            allSpansGlobal.forEach(s => s.style.backgroundColor = "transparent");
+                            
+                            wordSpans.forEach(span => {{
+                                let cleanTxt = span.innerText || span.textContent;
+                                // Clean punctuation markers preventing audio drops
+                                cleanTxt = cleanTxt.replace(/[।॥\\?\\!\\.\\,\\(\\)\\[\\]]+/g, '').trim();
+                                textWordsArray.push(cleanTxt);
+                            }});
+                            
+                            let compileSentence = textWordsArray.join(' ');
+                            if (compileSentence.length === 0) return;
+                            
+                            let utterance = new window.parent.SpeechSynthesisUtterance(compileSentence);
+                            utterance.lang = lang_code;
+                            utterance.rate = speed_rate;
+                            
+                            // Safe dynamic fallback voice routing mechanism to fix Telugu silence dropouts
+                            if(lang_code.startsWith('te')) {{
+                                let voices = window.parent.speechSynthesis.getVoices();
+                                let teVoice = voices.find(v => v.lang.startsWith('te') || v.lang.includes('Telugu'));
+                                if(teVoice) utterance.voice = teVoice;
                             }}
+                            
+                            // 🚀 THE HIGHLIGHT BOUNDARY CAPTURING LOGIC ENGINE
+                            utterance.onboundary = function(event) {{
+                                if (event.name === 'word') {{
+                                    // Calculate character index positions to isolate the current target word index string
+                                    let textPassed = event.target.text.substring(0, event.charIndex).trim();
+                                    let wordIndex = textPassed ? textPassed.split(/\\s+/).length : 0;
+                                    
+                                    // Reset active tier sibling highlighting classes
+                                    wordSpans.forEach(s => s.style.backgroundColor = "transparent");
+                                    
+                                    // Apply background tracking marker colors instantly
+                                    let activeSpan = window.parent.document.getElementById(prefix_id + "_" + wordIndex);
+                                    if (activeSpan) {{
+                                        activeSpan.style.backgroundColor = highlight_color;
+                                        activeSpan.style.borderRadius = "4px";
+                                        activeSpan.style.padding = "2px 4px";
+                                    }}
+                                }}
+                            }};
+                            
+                            // Clean up layout cards upon sound track final completions
+                            utterance.onend = function() {{
+                                wordSpans.forEach(s => s.style.backgroundColor = "transparent");
+                            }};
+                            utterance.onerror = function() {{
+                                wordSpans.forEach(s => s.style.backgroundColor = "transparent");
+                            }};
+                            
+                            window.parent.speechSynthesis.speak(utterance);
                         }}
-                        function emergencyKillAudio() {{
+                        
+                        function killActiveSpeech() {{
                             if (window.parent && window.parent.speechSynthesis) {{
                                 window.parent.speechSynthesis.cancel();
+                                let allSpansGlobal = window.parent.document.querySelectorAll("span");
+                                allSpansGlobal.forEach(s => s.style.backgroundColor = "transparent");
                             }}
                         }}
                         </script>
                         
-                        <button onclick="speakLiveScreenText('san_text_{v_uid}', 'hi-IN', 0.80)" 
+                        <button onclick="runHighlightSpeech('san_{v_uid}', 'hi-IN', 0.75, '#ffebd5')" 
                                 style="padding: 8px 14px; background-color: #ff9933; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">
                             🕉️ Read Sanskrit Text
                         </button>
                         
-                        <button onclick="speakLiveScreenText('tel_text_{v_uid}', 'te-IN', 0.80)" 
+                        <button onclick="runHighlightSpeech('tel_{v_uid}', 'te-IN', 0.75, '#dcfce7')" 
                                 style="padding: 8px 14px; background-color: #00a000; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">
                             🏹 Read Telugu Text
                         </button>
                         
-                        <button onclick="speakLiveScreenText('eng_text_{v_uid}', 'en-US', 0.90)" 
+                        <button onclick="runHighlightSpeech('eng_{v_uid}', 'en-US', 0.85, '#e0e7ff')" 
                                 style="padding: 8px 14px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size:0.85rem;">
                             🇬🇧 Read English Text
                         </button>
                         
-                        <button onclick="emergencyKillAudio()" 
+                        <button onclick="killActiveSpeech()" 
                                 style="padding: 8px 14px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-left: 20px; font-size:0.85rem;">
                             🛑 Stop Audio
                         </button>
