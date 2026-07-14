@@ -1,5 +1,6 @@
 import streamlit as st
 import json
+import re
 import urllib.request
 
 # Crucial: Import your standalone data engine from pipeline.py
@@ -11,14 +12,17 @@ st.set_page_config(page_title="IITK Indic Data Pipeline", layout="wide", page_ic
 # --- Custom CSS Styling Layer ---
 st.markdown("""
     <style>
+    /* Main App Background Normalization */
     .stApp {
         background-color: #f8fafc;
     }
+    /* Header and Title Typography */
     h1, h2, h3 {
         color: #0f172a !important;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         font-weight: 700;
     }
+    /* Structural Card Containers for Options A & B, Metrics, and Alerts */
     div[data-testid="stColumn"], div[data-testid="element-container"] > div.stAlert {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
@@ -26,6 +30,7 @@ st.markdown("""
         border-radius: 12px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
+    /* Metric Card Enhancements */
     div[data-testid="stMetricValue"] {
         font-size: 2rem !important;
         font-weight: 700 !important;
@@ -35,6 +40,7 @@ st.markdown("""
         font-weight: 600 !important;
         color: #475569 !important;
     }
+    /* Action Button Adjustments */
     .stButton>button {
         width: 100%;
         border-radius: 8px !important;
@@ -52,10 +58,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- Streamlit Presentation Layer ---
 st.title("🕉️ IIT Kanpur Git Supersite Data Pipeline")
 st.markdown("Transform unstructured raw file layouts into clean, schema-validated multilingual JSON objects instantaneously.")
 st.markdown("---")
 
+# Layout Split: 2 Independent Columns with Dedicated Card Backgrounds
 col1, col2 = st.columns(2)
 raw_text_data = None
 
@@ -63,11 +71,15 @@ with col1:
     st.markdown("### 🌐 Option A: Sync from Remote File")
     github_url = st.text_input(
         "Enter Plaintext / GitHub Raw URL:",
-        placeholder="https://githubusercontent.com"
+        placeholder="https://githubusercontent.com",
+        help="Make sure the URL points to raw text directly (://githubusercontent.com), not the standard HTML view page."
     )
     if github_url:
         try:
-            req = urllib.request.Request(github_url, headers={'User-Agent': 'Mozilla/5.0'})
+            req = urllib.request.Request(
+                github_url, 
+                headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+            )
             with urllib.request.urlopen(req) as response:
                 raw_text_data = response.read().decode('utf-8')
             st.success("✅ Remote file fetched and loaded successfully!")
@@ -76,18 +88,27 @@ with col1:
 
 with col2:
     st.markdown("### 📁 Option B: Local File Drag & Drop")
-    uploaded_file = st.file_uploader("Choose your unstructured text file (.txt):", type=['txt'])
+    uploaded_file = st.file_uploader(
+        "Choose your unstructured text file (.txt):", 
+        type=['txt'],
+        help="Upload files directly from your workspace directory disk storage."
+    )
     if uploaded_file is not None:
         raw_text_data = uploaded_file.getvalue().decode("utf-8")
         st.success("✅ Local file verified and uploaded successfully!")
 
+# --- Processing Runtime Layer ---
 if raw_text_data:
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("🚀 Execute Engine Pipeline", type="primary"):
+        # Fixed NameError from capital St to lowercase st
         with st.spinner("Executing regex parser matrix components..."):
+            
+            # Fire parsing engine tasks
             pipeline = IndicDataPipeline(raw_text_data)
             clean_json_output = pipeline.run_parser_pipeline()
             
+            # Store processed output state to remain active across sidebar switches
             st.session_state['parsed_output'] = clean_json_output
             st.session_state['raw_text'] = raw_text_data
 
@@ -97,13 +118,16 @@ if 'parsed_output' in st.session_state:
     verses = clean_json_output.get("verses", [])
     total_verses = len(verses)
     
+    # Calculate Real-Time Metrics
     available_chapters = sorted(list(set(v["chapter"] for v in verses)))
     total_chapters = len(available_chapters)
     total_words = sum(v["analytics"]["word_count"] for v in verses)
     avg_word_count = round(total_words / total_verses, 1) if total_verses > 0 else 0.0
     
+    # Track Validation Failures
     corrupted_verses = [v for v in verses if not v["validation"]["is_valid"]]
     
+    # --- Real-Time Analytics UI Section ---
     st.markdown("### 📊 Live Pipeline Metrics")
     m_col1, m_col2, m_col3 = st.columns(3)
     with m_col1:
@@ -113,6 +137,7 @@ if 'parsed_output' in st.session_state:
     with m_col3:
         st.metric(label="Avg Sanskrit Word Count", value=avg_word_count)
     
+    # --- Integrity Validation Flag Center ---
     if corrupted_verses:
         st.markdown("<br>", unsafe_allow_html=True)
         st.error(f"⚠️ Validation Warning: Found {len(corrupted_verses)} structural data anomalies during parse run.")
@@ -125,15 +150,15 @@ if 'parsed_output' in st.session_state:
         st.markdown("<br>", unsafe_allow_html=True)
         st.success("💯 Integrity Check Passed: Zero data dropouts or blank translation slots discovered.")
 
+    # --- Interactive Filtering Sidebar Component ---
     st.sidebar.markdown("### 🔍 Chapter Lookup Engine")
     filter_choice = st.sidebar.selectbox(
         "Filter Preview Database By Chapter:",
         options=["Show All Chapters"] + [f"Chapter {ch}" for ch in available_chapters]
     )
     
-    # Filter verses context array safely using digit matching regex patterns
+    # Updated lookup check using safe numeric regex isolation to prevent dropdown crashes
     if filter_choice != "Show All Chapters":
-        # Extracts only the digits (e.g., 'Chapter 18' becomes 18)
         chapter_digits = re.findall(r'\d+', filter_choice)
         if chapter_digits:
             target_ch = int(chapter_digits[0])
@@ -146,13 +171,19 @@ if 'parsed_output' in st.session_state:
             filtered_output = clean_json_output
     else:
         filtered_output = clean_json_output
+
     st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Stringify payload without corrupting Unicode character maps
     json_str = json.dumps(filtered_output, indent=4, ensure_ascii=False)
     
+    # UI Organization Elements
     tab1, tab2 = st.tabs(["📊 Interactive JSON Output", "📝 Checked Source Log"])
+    
     with tab1:
         st.markdown(f"### Schema-Validated Dataset Result ({filter_choice})")
         st.json(filtered_output)
+        
         st.markdown("---")
         st.download_button(
             label=f"💾 Download {filter_choice} JSON File",
@@ -160,6 +191,7 @@ if 'parsed_output' in st.session_state:
             file_name="iitk_indic_parsed_output.json",
             mime="application/json"
         )
+        
     with tab2:
         st.markdown("### System Log: Raw Plaintext String Preview")
         st.code(raw_text_data, language="text")
