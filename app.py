@@ -131,13 +131,21 @@ if 'parsed_output' in st.session_state:
         options=["Show All Chapters"] + [f"Chapter {ch}" for ch in available_chapters]
     )
     
+    # Filter verses context array safely using digit matching regex patterns
     if filter_choice != "Show All Chapters":
-        target_ch = int(filter_choice.split(" ")[1])
-        filtered_verses = [v for v in verses if v["chapter"] == target_ch]
-        filtered_output = {"metadata": clean_json_output["metadata"], "verses": filtered_verses}
+        # Extracts only the digits (e.g., 'Chapter 18' becomes 18)
+        chapter_digits = re.findall(r'\d+', filter_choice)
+        if chapter_digits:
+            target_ch = int(chapter_digits[0])
+            filtered_verses = [v for v in verses if v["chapter"] == target_ch]
+            filtered_output = {
+                "metadata": clean_json_output["metadata"],
+                "verses": filtered_verses
+            }
+        else:
+            filtered_output = clean_json_output
     else:
         filtered_output = clean_json_output
-
     st.markdown("<br>", unsafe_allow_html=True)
     json_str = json.dumps(filtered_output, indent=4, ensure_ascii=False)
     
