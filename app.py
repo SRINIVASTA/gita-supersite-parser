@@ -301,27 +301,29 @@ if st.session_state.get('pipeline_executed', False):
                         if len(splits) > 1:
                             st.markdown(f"• Compound **`{tok}`** splits into: " + " ".join([f"<span class='nlp-pill'>{s}</span>" for s in splits]), unsafe_allow_html=True)
                     # --- 🗣️ HYBRID DUAL-ENGINE TEXT HIGHLIGHTER & STREAMER (Guaranteed Highlight Sync for All Languages) ---
-                    tts_html = f"""
+                    # --- 🗣️ HYBRID DUAL-ENGINE TEXT HIGHLIGHTER & STREAMER (Guaranteed Highlight Sync for All Languages) ---
+                    # We use a standard Python string combined with a .replace() injection to completely prevent f-string bracket compilation crashes.
+                    raw_html_payload = """
                     <div style="font-family: 'Segoe UI', sans-serif; margin-top: 15px; background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
                         <p style='margin: 0 0 10px 0; font-size: 0.9rem; font-weight: 600; color: #475569;'>🗣️ Active Script Screen Reader & Word Highlighter Dashboard:</p>
                         
                         <script>
                         // Store individual global tracking timers inside the execution canvas to prevent text collisions
-                        if (typeof window.activeSpeechTimers === 'undefined') {{
+                        if (typeof window.activeSpeechTimers === 'undefined') {
                             window.activeSpeechTimers = {};
-                        }}
+                        }
                         
-                        function runHighlightSpeech(prefix_id, lang_code, speed_rate, highlight_color) {{
+                        function runHighlightSpeech(prefix_id, lang_code, speed_rate, highlight_color) {
                             if (!window.parent) return;
                             
                             // Reset any running tracking variables instantly
-                            if (window.activeSpeechTimers[prefix_id]) {{
+                            if (window.activeSpeechTimers[prefix_id]) {
                                 clearInterval(window.activeSpeechTimers[prefix_id]);
-                            }}
+                            }
                             if (window.parent.speechSynthesis) window.parent.speechSynthesis.cancel();
                             
                             let all_audios = window.parent.document.querySelectorAll('audio');
-                            all_audios.forEach(a => {{ a.pause(); a.currentTime = 0; }});
+                            all_audios.forEach(a => { a.pause(); a.currentTime = 0; });
                             
                             // Wipe lingering highlight background colors from previous playthroughs
                             let allSpansGlobal = window.parent.document.querySelectorAll("span");
@@ -331,12 +333,12 @@ if st.session_state.get('pipeline_executed', False):
                             let wordSpans = window.parent.document.querySelectorAll("[id^='" + prefix_id + "_']");
                             let wordsArray = [];
                             
-                            wordSpans.forEach(span => {{
+                            wordSpans.forEach(span => {
                                 let cleanTxt = span.innerText || span.textContent;
                                 // Filter special structural text layout markers preventing clean audio parses
                                 cleanTxt = cleanTxt.replace(/[।॥\\?\\!\\.\\,\\(\\)\\[\\]]+/g, '').trim();
                                 wordsArray.push(cleanTxt);
-                            }});
+                            });
                             
                             let completeSentence = wordsArray.join(' ');
                             if (completeSentence.length === 0) return;
@@ -349,87 +351,86 @@ if st.session_state.get('pipeline_executed', False):
                             if (lang_code === 'hi') msPerWord = 560 / speed_rate; // Extended vowel duration pace for Devanagari Sanskrit
                             if (lang_code === 'te') msPerWord = 620 / speed_rate; // Agglutinative pace for complex Telugu script loops
                             
-                            function triggerWordHighlight() {{
-                                if (activeWordIdx < wordSpans.length) {{
+                            function triggerWordHighlight() {
+                                if (activeWordIdx < wordSpans.length) {
                                     wordSpans.forEach(s => s.style.backgroundColor = "transparent");
                                     let currentSpan = window.parent.document.getElementById(prefix_id + "_" + activeWordIdx);
-                                    if (currentSpan) {{
+                                    if (currentSpan) {
                                         currentSpan.style.backgroundColor = highlight_color;
                                         currentSpan.style.borderRadius = "4px";
                                         currentSpan.style.padding = "2px 4px";
-                                    }}
+                                    }
                                     activeWordIdx++;
-                                }} else {{
+                                } else {
                                     clearInterval(window.activeSpeechTimers[prefix_id]);
                                     wordSpans.forEach(s => s.style.backgroundColor = "transparent");
-                                }}
-                            }}
+                                }
+                            }
                             
                             // --- CO-DEPENDENT ROUTING MATRIX ---
-                            if (lang_code === 'en') {{
+                            if (lang_code === 'en') {
                                 // English runs via Native Client Speech Engine safely
                                 let utterance = new window.parent.SpeechSynthesisUtterance(completeSentence);
                                 utterance.lang = 'en-US';
                                 utterance.rate = speed_rate;
                                 
-                                utterance.onstart = function() {{
+                                utterance.onstart = function() {
                                     triggerWordHighlight();
                                     window.activeSpeechTimers[prefix_id] = setInterval(triggerWordHighlight, msPerWord);
-                                }};
-                                utterance.onend = function() {{
+                                };
+                                utterance.onend = function() {
                                     clearInterval(window.activeSpeechTimers[prefix_id]);
                                     wordSpans.forEach(s => s.style.backgroundColor = "transparent");
-                                }};
+                                };
                                 window.parent.speechSynthesis.speak(utterance);
-                            }} else {{
+                            } else {
                                 // Indic Layouts (Sanskrit & Telugu) stream via Cloud Network TTS bypassing client OS dependencies
                                 let encodedText = encodeURIComponent(completeSentence);
-                                let streamerPlayer = document.getElementById("audio_streamer_{v_uid}");
+                                let streamerPlayer = document.getElementById("audio_streamer_V_UID_PLACEHOLDER");
                                 
                                 streamerPlayer.src = "https://google.com" + lang_code + "&client=tw-ob&q=" + encodedText;
                                 
-                                streamerPlayer.onplay = function() {{
+                                streamerPlayer.onplay = function() {
                                     triggerWordHighlight();
                                     window.activeSpeechTimers[prefix_id] = setInterval(triggerWordHighlight, msPerWord);
-                                }};
-                                streamerPlayer.onended = function() {{
+                                };
+                                streamerPlayer.onended = function() {
                                     clearInterval(window.activeSpeechTimers[prefix_id]);
                                     wordSpans.forEach(s => s.style.backgroundColor = "transparent");
-                                }};
+                                };
                                 streamerPlayer.play().catch(err => console.log("Streaming error event caught: ", err));
                             }}
-                        }}
                         
-                        function killActiveSpeech() {{
+                        function killActiveSpeech() {
                             // Clear all active tracking arrays
                             let keys = Object.keys(window.activeSpeechTimers);
                             keys.forEach(k => clearInterval(window.activeSpeechTimers[k]));
                             
                             if (window.parent && window.parent.speechSynthesis) window.parent.speechSynthesis.cancel();
                             
-                            let streamerPlayer = document.getElementById("audio_streamer_{v_uid}");
+                            let streamerPlayer = document.getElementById("audio_streamer_V_UID_PLACEHOLDER");
                             streamerPlayer.pause();
                             streamerPlayer.currentTime = 0;
                             
                             let allSpansGlobal = window.parent.document.querySelectorAll("span");
                             allSpansGlobal.forEach(s => s.style.backgroundColor = "transparent");
-                        }}
+                        }
                         </script>
                         
                         <!-- Standalone Hidden Audio Component Hook -->
-                        <audio id="audio_streamer_{v_uid}" crossOrigin="anonymous"></audio>
+                        <audio id="audio_streamer_V_UID_PLACEHOLDER" crossOrigin="anonymous"></audio>
                         
-                        <button onclick="runHighlightSpeech('san_{v_uid}', 'hi', 0.80, '#ffebd5')" 
+                        <button onclick="runHighlightSpeech('san_V_UID_PLACEHOLDER', 'hi', 0.80, '#ffebd5')" 
                                 style="padding: 8px 14px; background-color: #ff9933; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">
                             🕉️ Read Sanskrit Text
                         </button>
                         
-                        <button onclick="runHighlightSpeech('tel_{v_uid}', 'te', 0.75, '#dcfce7')" 
+                        <button onclick="runHighlightSpeech('tel_V_UID_PLACEHOLDER', 'te', 0.75, '#dcfce7')" 
                                 style="padding: 8px 14px; background-color: #00a000; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">
                             🏹 Read Telugu Text
                         </button>
                         
-                        <button onclick="runHighlightSpeech('eng_{v_uid}', 'en', 0.90, '#e0e7ff')" 
+                        <button onclick="runHighlightSpeech('eng_V_UID_PLACEHOLDER', 'en', 0.90, '#e0e7ff')" 
                                 style="padding: 8px 14px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size:0.85rem;">
                             🇬🇧 Read English Text
                         </button>
