@@ -80,7 +80,7 @@ ENGLISH: You have a right to perform your prescribed duties, but you are not ent
 * **Output Format Schema**: Schema-validated JSON Arrays & UTF-8-SIG Editable Spreadsheet CSV Layouts
 ## ✒️ Author and Credits
 
-* **Lead Architect & Developer:** [Srinivasta](https://github.com/SRINIVASTA) & My Team Mate:T.Pujitha Sri, BTECH (ECE), 2ND YEAR Student.
+* **Lead Architect & Developer:** [Srinivasta](https://github.com/SRINIVASTA)
 
 ### Connect with Me
 - [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/srinivas-t-a-557637119/)  
