@@ -78,5 +78,4 @@ ENGLISH: You have a right to perform your prescribed duties, but you are not ent
 
 ## 📜 Metadata License & Processing Framework
 * **Data Processor & Maintainer**: Appala Srinivas Tanakala
-* **Linguistic Data Source Scope**: IIT Kanpur Git Supersite Datasets
 * **Output Format Schema**: Schema-validated JSON Arrays & UTF-8-SIG Editable Spreadsheet CSV Layouts
