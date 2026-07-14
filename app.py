@@ -1,3 +1,77 @@
+def generate_audio_highlighter(v_uid, highlight_color):
+    """
+    Standalone function to completely prevent f-string bracket or 
+    HTML indentation compilation errors in deep loops.
+    """
+    html_payload = """
+    <div style="font-family: 'Segoe UI', sans-serif; margin-top: 15px; background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <p style='margin: 0 0 10px 0; font-size: 0.9rem; font-weight: 600; color: #475569;'>🗣️ Active Script Screen Reader & Word Highlighter Dashboard:</p>
+        
+        <script>
+        function runHighlightSpeech(prefix_id, lang_code, speed_rate, highlight_color) {
+            if (!window.parent || !window.parent.speechSynthesis) return;
+            
+            window.parent.speechSynthesis.cancel();
+            let wordSpans = window.parent.document.querySelectorAll("[id^='" + prefix_id + "_']");
+            wordSpans.forEach(s => s.style.backgroundColor = "transparent");
+            
+            let wordsArray = [];
+            wordSpans.forEach(span => {
+                wordsArray.push((span.innerText || span.textContent).trim());
+            });
+            let completeSentence = wordsArray.join(' ');
+            if (completeSentence.length === 0) return;
+            
+            let utterance = new window.parent.SpeechSynthesisUtterance(completeSentence);
+            utterance.rate = speed_rate;
+            
+            if (lang_code === 'hi') utterance.lang = 'hi-IN';
+            else if (lang_code === 'te') utterance.lang = 'te-IN';
+            else utterance.lang = 'en-US';
+            
+            utterance.onboundary = function(event) {
+                if (event.name === 'word') {
+                    let spokenTextPart = event.target.text.substring(0, event.charIndex).trim();
+                    let currentWordIdx = spokenTextPart ? spokenTextPart.split(/\\s+/).length : 0;
+                    
+                    wordSpans.forEach(s => s.style.backgroundColor = "transparent");
+                    let activeSpan = window.parent.document.getElementById(prefix_id + "_" + currentWordIdx);
+                    if (activeSpan) {
+                        activeSpan.style.backgroundColor = highlight_color;
+                        activeSpan.style.borderRadius = "4px";
+                        activeSpan.style.padding = "2px 4px";
+                    }
+                }
+            };
+            
+            utterance.onend = function() {
+                wordSpans.forEach(s => s.style.backgroundColor = "transparent");
+            };
+            utterance.onerror = function() {
+                wordSpans.forEach(s => s.style.backgroundColor = "transparent");
+            };
+            
+            window.parent.speechSynthesis.speak(utterance);
+        }
+        
+        function killActiveSpeech() {
+            if (window.parent && window.parent.speechSynthesis) {
+                window.parent.speechSynthesis.cancel();
+                let allSpansGlobal = window.parent.document.querySelectorAll("span");
+                allSpansGlobal.forEach(s => s.style.backgroundColor = "transparent");
+            }
+        }
+        </script>
+        
+        <button onclick="runHighlightSpeech('san_V_UID', 'hi', 0.80, '#ffebd5')" style="padding: 8px 14px; background-color: #ff9933; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">🕉️ Read Sanskrit Text</button>
+        <button onclick="runHighlightSpeech('tel_V_UID', 'te', 0.80, '#dcfce7')" style="padding: 8px 14px; background-color: #00a000; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">🏹 Read Telugu Text</button>
+        <button onclick="runHighlightSpeech('eng_V_UID', 'en', 0.90, '#e0e7ff')" style="padding: 8px 14px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size:0.85rem;">🇬🇧 Read English Text</button>
+        <button onclick="killActiveSpeech()" style="padding: 8px 14px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-left: 20px; font-size:0.85rem;">🛑 Stop Audio</button>
+    </div>
+    """
+    return html_payload.replace("V_UID", v_uid)
+
+
 import streamlit as st
 import json
 import re
@@ -291,9 +365,6 @@ if st.session_state.get('pipeline_executed', False):
                         <button onclick="killActiveSpeech()" style="padding: 8px 14px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-left: 20px; font-size:0.85rem;">🛑 Stop Audio</button>
                     </div>
                     """
-                    tts_html = raw_html_payload.replace("V_UID_PLACEHOLDER", v_uid)
-                    st.components.v1.html(tts_html, height=110)
-                    st.markdown("---")
             else: st.warning("🔍 No matching verses found. Try another vocabulary word.")
         else: st.info("💡 Enter a string value keyword above to filter across your entire structural text database instantaneously.")
             
