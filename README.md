@@ -2,8 +2,7 @@
 
 An enterprise-grade, serverless data extraction pipeline and research dashboard designed for parsing unstructured layout dumps from the IIT Kanpur Gita Supersite. This system transforms raw multilingual text layouts into schema-validated, indexable JSON documents and provides advanced NLP token splitting, interactive analytics, and server-side synchronized audio screen reading.
 
-## 🚀 Live Application
-Deployed and hosted via **Streamlit Community Cloud**.
+🌐 **Live Interactive Web App:** [Launch Live Streamlit Dashboard](https://gita-supersite-parser-fv3cznbz4rxhva9zuabmc2.streamlit.app/))
 
 ---
 
@@ -79,3 +78,15 @@ ENGLISH: You have a right to perform your prescribed duties, but you are not ent
 ## 📜 Metadata License & Processing Framework
 * **Data Processor & Maintainer**: Appala Srinivas Tanakala
 * **Output Format Schema**: Schema-validated JSON Arrays & UTF-8-SIG Editable Spreadsheet CSV Layouts
+## ✒️ Author and Credits
+
+* **Lead Architect & Developer:** [Srinivasta](https://github.com/SRINIVASTA) & My Team Mate:T.Pujitha Sri, BTECH (ECE), 2ND YEAR Student.
+
+### Connect with Me
+- [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/srinivas-t-a-557637119/)  
+- [![Kaggle](https://img.shields.io/badge/Kaggle-20BEFF?style=for-the-badge&logo=kaggle&logoColor=white)](https://www.kaggle.com/srinivasta)  
+- [![Email](https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:tasrinivass@gmail.com)  
+- [![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/srinivasta)
+
+
+
