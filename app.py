@@ -48,7 +48,7 @@ class SanskritNLPSplitter:
     def break_compounds(token):
         rules = [
             (r'(.*?)यावाधिकार(.*?)$', [r'\1ि', 'एव', 'अधिकार', r'\2']),
-            (r'(.*?)गఽस्त్వ(.*?)$', [r'\1गః', 'అస్తు', r'\2']),
+            (r'(.*?)गఽస్త్వ(.*?)$', [r'\1गః', 'అస్తు', r'\2']),
             (r'(.*?)శ్చైవ(.*?)$', [r'\1చ', 'ఎవ', r'\2']),
             (r'(.*?)श्चैव(.*?)$', [r'\1च', 'एव', r'\2']),
             (r'(.*?)హేతుర్భూ(.*?)$', [r'\1హేతుః', 'భూ', r'\2']),
@@ -158,7 +158,6 @@ if st.session_state.get('pipeline_executed', False):
         st.metric(label="Unique Chapters Found", value=total_chapters)
     with m_col3:
         st.metric(label="Avg Sanskrit Word Count", value=avg_word_count)
-        
     # --- Interactive Plotly Charts Studio ---
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 📉 Interactive Text Layout Analytics Studio")
@@ -184,6 +183,7 @@ if st.session_state.get('pipeline_executed', False):
                       color_discrete_sequence=px.colors.qualitative.Safe)
         fig2.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=350)
         st.plotly_chart(fig2, use_container_width=True)
+
     # --- Integrity Validation Flag Center ---
     if corrupted_verses:
         st.markdown("<br>", unsafe_allow_html=True)
@@ -196,7 +196,6 @@ if st.session_state.get('pipeline_executed', False):
     else:
         st.markdown("<br>", unsafe_allow_html=True)
         st.success("💯 Integrity Check Passed: Zero data dropouts or blank translation slots discovered.")
-
 
     # --- Interactive Filtering Sidebar Component ---
     st.sidebar.markdown("### 🔍 Chapter Lookup Engine")
@@ -219,7 +218,6 @@ if st.session_state.get('pipeline_executed', False):
         filtered_verses = verses
 
     st.markdown("<br>", unsafe_allow_html=True)
-    
     # --- UI Organization Master Tabs ---
     tab1, tab2, tab3 = st.tabs(["📊 Interactive JSON Output", "🔎 Multi-Script Search Engine & Audio Reader", "📝 Checked Source Log"])
     
@@ -275,12 +273,14 @@ if st.session_state.get('pipeline_executed', False):
             if results_found:
                 st.success(f"🎯 Found {len(results_found)} matching verse entries:")
                 for match_v in results_found:
+                    v_uid = match_v['verse_id']
+                    
                     st.markdown(f"""
                     <div class="search-card">
                         <h4>📌 Verse ID: {match_v['verse_id']} (Chapter {match_v['chapter']}, Verse {match_v['verse_number']})</h4>
-                        <p><b>Sanskrit:</b> {match_v['linguistic_layers']['devanagari_sanskrit']}</p>
-                        <p><b>Telugu:</b> {match_v['linguistic_layers']['telugu_script']}</p>
-                        <p><b>English:</b> {match_v['translations']['english_translation']}</p>
+                        <p><b>Sanskrit:</b> <span id="san_text_{v_uid}">{match_v['linguistic_layers']['devanagari_sanskrit']}</span></p>
+                        <p><b>Telugu:</b> <span id="tel_text_{v_uid}">{match_v['linguistic_layers']['telugu_script']}</span></p>
+                        <p><b>English:</b> <span id="eng_text_{v_uid}">{match_v['translations']['english_translation']}</span></p>
                     </div>
                     """, unsafe_allow_html=True)
                     
@@ -292,57 +292,57 @@ if st.session_state.get('pipeline_executed', False):
                         if len(splits) > 1:
                             st.markdown(f"• Compound **`{tok}`** splits into: " + " ".join([f"<span class='nlp-pill'>{s}</span>" for s in splits]), unsafe_allow_html=True)
                     
-                    # --- 🗣️ UPGRADED MULTILINGUAL CLOUD AUDIO PLAYER ---
-                    # Encodes query text parameters into URL strings to stream high-fidelity speech safely
-                    import urllib.parse
-                    san_query = urllib.parse.quote(match_v['linguistic_layers']['devanagari_sanskrit'])
-                    tel_query = urllib.parse.quote(match_v['linguistic_layers']['telugu_script'])
-                    eng_query = urllib.parse.quote(match_v['translations']['english_translation'])
-                    
-                    # Create persistent global unique identifiers to isolate audio player elements cleanly
-                    v_uid = match_v['verse_id']
-                    
+                    # --- 🗣️ AUTOMATED ON-SCREEN TEXT-READING AUDIO PLAYER ---
                     tts_html = f"""
                     <div style="font-family: 'Segoe UI', sans-serif; margin-top: 15px; background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <p style='margin: 0 0 10px 0; font-size: 0.9rem; font-weight: 600; color: #475569;'>🗣️ High-Fidelity Audio Reader Dashboard (Guaranteed Voice Playback):</p>
+                        <p style='margin: 0 0 10px 0; font-size: 0.9rem; font-weight: 600; color: #475569;'>🗣️ Screen-Reader Audio Dashboard (Reads Text Directly from the Card):</p>
                         
-                        <!-- JavaScript Global Player Handlers -->
                         <script>
-                        function playCloudAudio(player_id, query_txt, lang_code) {{
-                            // Terminate any active players to prevent overlapping voices
-                            let all_audios = document.querySelectorAll('audio');
+                        function readScreenText(target_span_id, lang_code, streamer_id) {{
+                            // Stop any active overlapping audio playbacks
+                            let all_audios = window.parent.document.querySelectorAll('audio');
                             all_audios.forEach(a => {{ a.pause(); a.currentTime = 0; }});
                             
-                            let player = document.getElementById(player_id);
-                            player.src = "https://google.com" + lang_code + "&client=tw-ob&q=" + query_txt;
-                            player.play();
+                            // Find the precise text element on the parent browser screen
+                            let textElement = window.parent.document.getElementById(target_span_id);
+                            if (textElement) {{
+                                let rawText = textElement.innerText || textElement.textContent;
+                                let encodedText = encodeURIComponent(rawText.trim());
+                                
+                                // Stream the isolated on-screen text string to the audio container
+                                let player = document.getElementById(streamer_id);
+                                player.src = "https://google.com" + lang_code + "&client=tw-ob&q=" + encodedText;
+                                player.play();
+                            }} else {{
+                                console.error("Could not locate screen text span element: " + target_span_id);
+                            }}
                         }}
-                        function stopCloudAudio(player_id) {{
-                            let player = document.getElementById(player_id);
+                        function stopScreenAudio(streamer_id) {{
+                            let player = document.getElementById(streamer_id);
                             player.pause();
                             player.currentTime = 0;
                         }}
                         </script>
                         
-                        <!-- Hidden Audio Stream Element Container -->
+                        <!-- Localized Hidden Audio Anchor Tag -->
                         <audio id="audio_streamer_{v_uid}"></audio>
                         
-                        <button onclick="playCloudAudio('audio_streamer_{v_uid}', '{san_query}', 'hi')" 
+                        <button onclick="readScreenText('san_text_{v_uid}', 'hi', 'audio_streamer_{v_uid}')" 
                                 style="padding: 8px 14px; background-color: #ff9933; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">
-                            🕉️ Play Sanskrit (hi)
+                            🕉️ Read Sanskrit Text
                         </button>
                         
-                        <button onclick="playCloudAudio('audio_streamer_{v_uid}', '{tel_query}', 'te')" 
+                        <button onclick="readScreenText('tel_text_{v_uid}', 'te', 'audio_streamer_{v_uid}')" 
                                 style="padding: 8px 14px; background-color: #00a000; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">
-                            🏹 Play Telugu (te)
+                            🏹 Read Telugu Text
                         </button>
                         
-                        <button onclick="playCloudAudio('audio_streamer_{v_uid}', '{eng_query}', 'en')" 
+                        <button onclick="readScreenText('eng_text_{v_uid}', 'en', 'audio_streamer_{v_uid}')" 
                                 style="padding: 8px 14px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size:0.85rem;">
-                            🇬🇧 Play English (en)
+                            🇬🇧 Read English Text
                         </button>
                         
-                        <button onclick="stopCloudAudio('audio_streamer_{v_uid}')" 
+                        <button onclick="stopScreenAudio('audio_streamer_{v_uid}')" 
                                 style="padding: 8px 14px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-left: 20px; font-size:0.85rem;">
                             🛑 Stop Audio
                         </button>
