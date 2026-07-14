@@ -13,7 +13,20 @@ The workspace uses a strictly organized, decoupled structure separating the proc
 ├── app.py                # Main Streamlit web application dashboard (UI, Charts, TTS)
 ├── pipeline.py           # Backend core parsing engine & data validation layer
 ├── requirements.txt      # Cloud environment container dependencies
+├── sample_dump.txt       # Embedded test dataset containing raw verse layouts
 └── README.md             # Project documentation and manual guide
+```
+
+---
+
+## 📊 How to Use the Embedded Test Dataset
+The project includes an embedded `sample_dump.txt` file directly inside the repository tree for quick platform validation.
+
+1. Locate the `sample_dump.txt` file in the file explorer list up above.
+2. Click on the file name to open its content window.
+3. Click the **"Raw"** button in the upper-right corner of the code frame to view the plain text.
+4. Download the file to your computer or copy the text segments.
+5. Launch your active Streamlit dashboard, pass the security portal, and drop the text into **📁 Local File Drag & Drop** to trigger the parsing algorithms instantly.
 ```
 
 ---
