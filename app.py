@@ -1,7 +1,6 @@
 import streamlit as st
 import json
 import re
-import urllib.request
 
 # Crucial: Import your standalone data engine from pipeline.py
 from pipeline import IndicDataPipeline
@@ -22,8 +21,8 @@ st.markdown("""
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         font-weight: 700;
     }
-    /* Structural Card Containers for Options A & B, Metrics, and Alerts */
-    div[data-testid="stColumn"], div[data-testid="element-container"] > div.stAlert {
+    /* Structural Card Containers for Options, Metrics, and Alerts */
+    div[data-testid="stColumn"], div[data-testid="element-container"] > div.stAlert, .upload-container {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
         padding: 24px;
@@ -63,39 +62,19 @@ st.title("🕉️ IIT Kanpur Git Supersite Data Pipeline")
 st.markdown("Transform unstructured raw file layouts into clean, schema-validated multilingual JSON objects instantaneously.")
 st.markdown("---")
 
-# Layout Split: 2 Independent Columns with Dedicated Card Backgrounds
-col1, col2 = st.columns(2)
+# Single Container Layout for Local File Upload
 raw_text_data = None
 
-with col1:
-    st.markdown("### 🌐 Option A: Sync from Remote File")
-    github_url = st.text_input(
-        "Enter Plaintext / GitHub Raw URL:",
-        placeholder="https://githubusercontent.com",
-        help="Make sure the URL points to raw text directly (://githubusercontent.com), not the standard HTML view page."
-    )
-    if github_url:
-        try:
-            req = urllib.request.Request(
-                github_url, 
-                headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-            )
-            with urllib.request.urlopen(req) as response:
-                raw_text_data = response.read().decode('utf-8')
-            st.success("✅ Remote file fetched and loaded successfully!")
-        except Exception as e:
-            st.error(f"❌ Failed to stream text file content: {e}")
+st.markdown("### 📁 Local File Drag & Drop")
+uploaded_file = st.file_uploader(
+    "Choose your unstructured text file (.txt):", 
+    type=['txt'],
+    help="Upload files directly from your workspace directory disk storage."
+)
 
-with col2:
-    st.markdown("### 📁 Option B: Local File Drag & Drop")
-    uploaded_file = st.file_uploader(
-        "Choose your unstructured text file (.txt):", 
-        type=['txt'],
-        help="Upload files directly from your workspace directory disk storage."
-    )
-    if uploaded_file is not None:
-        raw_text_data = uploaded_file.getvalue().decode("utf-8")
-        st.success("✅ Local file verified and uploaded successfully!")
+if uploaded_file is not None:
+    raw_text_data = uploaded_file.getvalue().decode("utf-8")
+    st.success("✅ Local file verified and uploaded successfully!")
 
 # --- Processing Runtime Layer ---
 if raw_text_data:
@@ -197,4 +176,4 @@ if st.session_state.get('pipeline_executed', False):
         st.markdown("### System Log: Raw Plaintext String Preview")
         st.code(raw_text_data, language="text")
 else:
-    st.info("ℹ️ Pipeline Idle: Please feed raw dump sources via an Option A URL string input or an Option B file upload up above.")
+    st.info("ℹ️ Pipeline Idle: Please upload a raw text file (.txt) up above to trigger processing.")
