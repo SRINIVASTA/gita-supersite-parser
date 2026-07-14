@@ -300,97 +300,123 @@ if st.session_state.get('pipeline_executed', False):
                         splits = SanskritNLPSplitter.break_compounds(tok)
                         if len(splits) > 1:
                             st.markdown(f"• Compound **`{tok}`** splits into: " + " ".join([f"<span class='nlp-pill'>{s}</span>" for s in splits]), unsafe_allow_html=True)
-                    # --- 🗣️ DYNAMIC REWRITTEN SPEECH HIGHLIGHTER LOGIC MATRIX LAYER ---
+                    # --- 🗣️ DYNAMIC DUAL-ENGINE SPEECH HIGHLIGHTER LOGIC (Universal Highlights & Voice Playback) ---
                     tts_html = f"""
                     <div style="font-family: 'Segoe UI', sans-serif; margin-top: 15px; background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
                         <p style='margin: 0 0 10px 0; font-size: 0.9rem; font-weight: 600; color: #475569;'>🗣️ Active Script Screen Reader & Word Highlighter Dashboard:</p>
                         
                         <script>
+                        var speechTimer = null;
+                        
                         function runHighlightSpeech(prefix_id, lang_code, speed_rate, highlight_color) {{
-                            if (!window.parent || !window.parent.speechSynthesis) return;
+                            if (!window.parent) return;
                             
-                            window.parent.speechSynthesis.cancel();
+                            // Clear any active running audio streams or text highlighters
+                            clearInterval(speechTimer);
+                            if (window.parent.speechSynthesis) window.parent.speechSynthesis.cancel();
+                            let all_audios = window.parent.document.querySelectorAll('audio');
+                            all_audios.forEach(a => {{ a.pause(); a.currentTime = 0; }});
                             
-                            // Collect text strings cleanly by extracting directly from target span clusters
-                            let wordSpans = window.parent.document.querySelectorAll("[id^='" + prefix_id + "_']");
-                            let textWordsArray = [];
-                            
-                            // Reset any lingering visual canvas highlight marks left behind from previous plays
+                            // Reset all visible text highlights on screen
                             let allSpansGlobal = window.parent.document.querySelectorAll("span");
                             allSpansGlobal.forEach(s => s.style.backgroundColor = "transparent");
                             
+                            // Fetch all active word spans inside the targeted card container
+                            let wordSpans = window.parent.document.querySelectorAll("[id^='" + prefix_id + "_']");
+                            let textWordsArray = [];
+                            
                             wordSpans.forEach(span => {{
                                 let cleanTxt = span.innerText || span.textContent;
-                                // Clean punctuation markers preventing audio drops
                                 cleanTxt = cleanTxt.replace(/[।॥\\?\\!\\.\\,\\(\\)\\[\\]]+/g, '').trim();
                                 textWordsArray.push(cleanTxt);
                             }});
                             
-                            let compileSentence = textWordsArray.join(' ');
-                            if (compileSentence.length === 0) return;
+                            let fullTextSentence = textWordsArray.join(' ');
+                            if (fullTextSentence.length === 0) return;
                             
-                            let utterance = new window.parent.SpeechSynthesisUtterance(compileSentence);
-                            utterance.lang = lang_code;
-                            utterance.rate = speed_rate;
+                            let currentWordIndex = 0;
                             
-                            // Safe dynamic fallback voice routing mechanism to fix Telugu silence dropouts
-                            if(lang_code.startsWith('te')) {{
-                                let voices = window.parent.speechSynthesis.getVoices();
-                                let teVoice = voices.find(v => v.lang.startsWith('te') || v.lang.includes('Telugu'));
-                                if(teVoice) utterance.voice = teVoice;
-                            }}
+                            // --- CALCULATE WORDS DYNAMIC INTERVAL SPEED ---
+                            // Dynamically adjusts speech duration to match words per minute for smooth highlights
+                            let msPerWord = (lang_code === 'en') ? (420 / speed_rate) : (530 / speed_rate);
                             
-                            // 🚀 THE HIGHLIGHT BOUNDARY CAPTURING LOGIC ENGINE
-                            utterance.onboundary = function(event) {{
-                                if (event.name === 'word') {{
-                                    // Calculate character index positions to isolate the current target word index string
-                                    let textPassed = event.target.text.substring(0, event.charIndex).trim();
-                                    let wordIndex = textPassed ? textPassed.split(/\\s+/).length : 0;
-                                    
-                                    // Reset active tier sibling highlighting classes
+                            function triggerTimerHighlight() {{
+                                if (currentWordIndex < wordSpans.length) {{
                                     wordSpans.forEach(s => s.style.backgroundColor = "transparent");
-                                    
-                                    // Apply background tracking marker colors instantly
-                                    let activeSpan = window.parent.document.getElementById(prefix_id + "_" + wordIndex);
+                                    let activeSpan = window.parent.document.getElementById(prefix_id + "_" + currentWordIndex);
                                     if (activeSpan) {{
                                         activeSpan.style.backgroundColor = highlight_color;
                                         activeSpan.style.borderRadius = "4px";
                                         activeSpan.style.padding = "2px 4px";
                                     }}
+                                    currentWordIndex++;
+                                }} else {{
+                                    clearInterval(speechTimer);
+                                    wordSpans.forEach(s => s.style.backgroundColor = "transparent");
                                 }}
-                            }};
-                            
-                            // Clean up layout cards upon sound track final completions
-                            utterance.onend = function() {{
-                                wordSpans.forEach(s => s.style.backgroundColor = "transparent");
-                            }};
-                            utterance.onerror = function() {{
-                                wordSpans.forEach(s => s.style.backgroundColor = "transparent");
-                            }};
-                            
-                            window.parent.speechSynthesis.speak(utterance);
+                            }}
+
+                            // --- ENGINE ROUTING SELECTION LOGIC ---
+                            if (lang_code === 'en') {{
+                                // English runs via Native Browser Synthesis Engine safely
+                                let utterance = new window.parent.SpeechSynthesisUtterance(fullTextSentence);
+                                utterance.lang = 'en-US';
+                                utterance.rate = speed_rate;
+                                
+                                utterance.onstart = function() {{
+                                    triggerTimerHighlight();
+                                    speechTimer = setInterval(triggerTimerHighlight, msPerWord);
+                                }};
+                                utterance.onend = function() {{
+                                    clearInterval(speechTimer);
+                                    wordSpans.forEach(s => s.style.backgroundColor = "transparent");
+                                }};
+                                window.parent.speechSynthesis.speak(utterance);
+                            }} else {{
+                                // Indic Scripts (Sanskrit & Telugu) stream via Cloud TTS to fix silent dropouts
+                                let encodedSentence = encodeURIComponent(fullTextSentence);
+                                let player = document.getElementById("audio_streamer_{v_uid}");
+                                
+                                player.src = "https://google.com" + lang_code + "&client=tw-ob&q=" + encodedSentence;
+                                
+                                player.onplay = function() {{
+                                    triggerTimerHighlight();
+                                    speechTimer = setInterval(triggerTimerHighlight, msPerWord);
+                                }};
+                                player.onended = function() {{
+                                    clearInterval(speechTimer);
+                                    wordSpans.forEach(s => s.style.backgroundColor = "transparent");
+                                }};
+                                player.play().catch(e => console.log("Playback engine notice:", e));
+                            }}
                         }}
                         
                         function killActiveSpeech() {{
-                            if (window.parent && window.parent.speechSynthesis) {{
-                                window.parent.speechSynthesis.cancel();
-                                let allSpansGlobal = window.parent.document.querySelectorAll("span");
-                                allSpansGlobal.forEach(s => s.style.backgroundColor = "transparent");
-                            }}
+                            clearInterval(speechTimer);
+                            if (window.parent && window.parent.speechSynthesis) window.parent.speechSynthesis.cancel();
+                            let player = document.getElementById("audio_streamer_{v_uid}");
+                            player.pause();
+                            player.currentTime = 0;
+                            
+                            let allSpansGlobal = window.parent.document.querySelectorAll("span");
+                            allSpansGlobal.forEach(s => s.style.backgroundColor = "transparent");
                         }}
                         </script>
                         
-                        <button onclick="runHighlightSpeech('san_{v_uid}', 'hi-IN', 0.75, '#ffebd5')" 
+                        <!-- Hidden Audio Stream Engine Hook -->
+                        <audio id="audio_streamer_{v_uid}" crossOrigin="anonymous"></audio>
+                        
+                        <button onclick="runHighlightSpeech('san_{v_uid}', 'hi', 0.80, '#ffebd5')" 
                                 style="padding: 8px 14px; background-color: #ff9933; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">
                             🕉️ Read Sanskrit Text
                         </button>
                         
-                        <button onclick="runHighlightSpeech('tel_{v_uid}', 'te-IN', 0.75, '#dcfce7')" 
+                        <button onclick="runHighlightSpeech('tel_{v_uid}', 'te', 0.75, '#dcfce7')" 
                                 style="padding: 8px 14px; background-color: #00a000; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">
                             🏹 Read Telugu Text
                         </button>
                         
-                        <button onclick="runHighlightSpeech('eng_{v_uid}', 'en-US', 0.85, '#e0e7ff')" 
+                        <button onclick="runHighlightSpeech('eng_{v_uid}', 'en', 0.90, '#e0e7ff')" 
                                 style="padding: 8px 14px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size:0.85rem;">
                             🇬🇧 Read English Text
                         </button>
