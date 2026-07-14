@@ -197,31 +197,6 @@ if st.session_state.get('pipeline_executed', False):
         st.markdown("<br>", unsafe_allow_html=True)
         st.success("💯 Integrity Check Passed: Zero data dropouts or blank translation slots discovered.")
 
-    # --- Integrity Validation Flag Center ---
-    if corrupted_verses:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.error(f"⚠️ Validation Warning: Found {len(corrupted_verses)} structural data anomalies during parse run.")
-        with st.expander("🔍 Click to Inspect Flagged Integrity Anomalies"):
-            for bad_v in corrupted_verses:
-                st.warning(f"**ID: {bad_v['verse_id']}** (Chapter {bad_v['chapter']}, Verse {bad_v['verse_number']})")
-                for issue in bad_v["validation"]["flagged_issues"]:
-                    st.write(f"• {issue}")
-    else:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.success("💯 Integrity Check Passed: Zero data dropouts or blank translation slots discovered.")
-
-    # --- Integrity Validation Flag Center ---
-    if corrupted_verses:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.error(f"⚠️ Validation Warning: Found {len(corrupted_verses)} structural data anomalies during parse run.")
-        with st.expander("🔍 Click to Inspect Flagged Integrity Anomalies"):
-            for bad_v in corrupted_verses:
-                st.warning(f"**ID: {bad_v['verse_id']}** (Chapter {bad_v['chapter']}, Verse {bad_v['verse_number']})")
-                for issue in bad_v["validation"]["flagged_issues"]:
-                    st.write(f"• {issue}")
-    else:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.success("💯 Integrity Check Passed: Zero data dropouts or blank translation slots discovered.")
 
     # --- Interactive Filtering Sidebar Component ---
     st.sidebar.markdown("### 🔍 Chapter Lookup Engine")
