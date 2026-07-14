@@ -283,7 +283,7 @@ if st.session_state.get('pipeline_executed', False):
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # --- FEATURE 1: LINGUISTIC NLP COMPOUND BREAKDOWN PREVIEW ---
+                    # --- LINGUISTIC NLP COMPOUND BREAKDOWN PREVIEW ---
                     st.markdown("##### 🧬 Deep NLP Compound Morphological Splitting:")
                     raw_tokens = re.sub(r'[।॥\s]+', ' ', match_v['linguistic_layers']['devanagari_sanskrit']).strip().split(' ')
                     for tok in raw_tokens:
@@ -291,17 +291,34 @@ if st.session_state.get('pipeline_executed', False):
                         if len(splits) > 1:
                             st.markdown(f"• Compound **`{tok}`** splits into: " + " ".join([f"<span class='nlp-pill'>{s}</span>" for s in splits]), unsafe_allow_html=True)
                     
-                    # 🗣️ Text-to-Speech Audio Reader Integration Layer
-                    tts_text = match_v['translations']['english_translation'].replace('"', '\\"')
+                    # 🗣️ NEW MULTILINGUAL TEXT-TO-SPEECH LAYER 
+                    # Escaping text inputs to bypass HTML syntax breaks
+                    san_clean = match_v['linguistic_layers']['devanagari_sanskrit'].replace("'", "\\'")
+                    tel_clean = match_v['linguistic_layers']['telugu_script'].replace("'", "\\'")
+                    eng_clean = match_v['translations']['english_translation'].replace("'", "\\'")
+                    
                     tts_html = f"""
-                    <p style='margin-top:10px;'>🗣️ <b>Listen to English Translation:</b><br>
-                    <button onclick="let speech = new SpeechSynthesisUtterance('{tts_text}'); speech.lang='en-US'; window.speechSynthesis.speak(speech);" 
-                    style="padding: 6px 12px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                        ▶️ Play Audio Reader
-                    </button>
-                    </p>
+                    <div style="font-family: 'Segoe UI', sans-serif; margin-top: 15px; background-color: #ffffff; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <p style='margin: 0 0 8px 0; font-size: 0.9rem; font-weight: 600; color: #475569;'>🗣️ Multilingual Audio Reader:</p>
+                        <button onclick="window.speechSynthesis.cancel(); let s = new SpeechSynthesisUtterance('{san_clean}'); s.lang='hi-IN'; s.rate=0.85; window.speechSynthesis.speak(s);" 
+                                style="padding: 6px 12px; background-color: #ff9933; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px;">
+                            🕉️ Play Sanskrit (hi-IN)
+                        </button>
+                        <button onclick="window.speechSynthesis.cancel(); let s = new SpeechSynthesisUtterance('{tel_clean}'); s.lang='te-IN'; s.rate=0.85; window.speechSynthesis.speak(s);" 
+                                style="padding: 6px 12px; background-color: #00a000; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px;">
+                            🏹 Play Telugu (te-IN)
+                        </button>
+                        <button onclick="window.speechSynthesis.cancel(); let s = new SpeechSynthesisUtterance('{eng_clean}'); s.lang='en-US'; s.rate=0.95; window.speechSynthesis.speak(s);" 
+                                style="padding: 6px 12px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                            🇬🇧 Play English (en-US)
+                        </button>
+                        <button onclick="window.speechSynthesis.cancel();" 
+                                style="padding: 6px 12px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-left: 15px;">
+                            🛑 Stop Audio
+                        </button>
+                    </div>
                     """
-                    st.components.v1.html(tts_html, height=65)
+                    st.components.v1.html(tts_html, height=75)
                     st.markdown("---")
             else:
                 st.warning("🔍 No matching verses found. Try another vocabulary entry variant or string snippet keyword.")
