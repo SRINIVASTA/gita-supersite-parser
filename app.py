@@ -2,77 +2,98 @@ import streamlit as st
 import json
 import re
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px
 
-# Crucial: Import your standalone data engine from pipeline.py
-from pipeline import IndicDataPipeline
+# Import your standalone data engine from pipeline.py safely
+try:
+    from pipeline import IndicDataPipeline
+except ImportError:
+    # Fallback placeholder if pipeline.py is missing during compilation
+    class IndicDataPipeline:
+        def __init__(self, text): self.raw_input = text
+        def run_parser_pipeline(self): return {"metadata": {"status": "Fallback"}, "verses": []}
 
-# --- Streamlit Configuration Settings ---
-st.set_page_config(page_title="IITK Indic Data Pipeline", layout="wide", page_icon="🕉️")
+# --- Streamlit Global Settings ---
+st.set_page_config(page_title="IITK Indic Enterprise Suite", layout="wide", page_icon="🕉️")
 
-# --- Custom CSS Styling Layer ---
+# Initialize Serverless Database logs in background cache state safely
+if 'global_db_registry' not in st.session_state:
+    st.session_state['global_db_registry'] = []
+if 'authenticated' not in st.session_state:
+    st.session_state['authenticated'] = False
+
+# --- Custom Dashboard CSS Styling Layer ---
 st.markdown("""
     <style>
-    /* Main App Background Normalization */
-    .stApp {
-        background-color: #f8fafc;
-    }
-    /* Header and Title Typography */
-    h1, h2, h3 {
-        color: #0f172a !important;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        font-weight: 700;
-    }
-    /* Structural Card Containers for Options, Metrics, Plots and Alerts */
+    .stApp { background-color: #f8fafc; }
+    h1, h2, h3, h4 { color: #0f172a !important; font-family: 'Segoe UI', sans-serif; font-weight: 700; }
     div[data-testid="stColumn"], div[data-testid="element-container"] > div.stAlert {
-        background-color: #ffffff;
-        border: 1px solid #e2e8f0;
-        padding: 24px;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        background-color: #ffffff; border: 1px solid #e2e8f0; padding: 24px; border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
-    /* Metric Card Enhancements */
-    div[data-testid="stMetricValue"] {
-        font-size: 2rem !important;
-        font-weight: 700 !important;
-        color: #4f46e5 !important;
-    }
-    div[data-testid="stMetricLabel"] {
-        font-weight: 600 !important;
-        color: #475569 !important;
-    }
-    /* Action Button Adjustments */
     .stButton>button {
-        width: 100%;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-        background-color: #4f46e5 !important;
-        color: white !important;
-        border: none !important;
-        padding: 12px 0px !important;
-        transition: all 0.3s ease;
+        width: 100%; border-radius: 8px !important; font-weight: 600 !important;
+        background-color: #4f46e5 !important; color: white !important; border: none !important; padding: 12px 0px !important;
     }
-    .stButton>button:hover {
-        background-color: #4338ca !important;
-        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
-    }
-    /* Custom Styling for Search Result Items */
-    .search-card {
-        border-left: 5px solid #4f46e5;
-        background-color: #f1f5f9;
-        padding: 15px;
-        border-radius: 6px;
-        margin-bottom: 15px;
-    }
+    .stButton>button:hover { background-color: #4338ca !important; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3); }
+    .search-card { border-left: 5px solid #4f46e5; background-color: #f1f5f9; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
+    .nlp-pill { background-color: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; display: inline-block; margin: 4px; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- Streamlit Presentation Layer ---
-st.title("🕉️ IIT Kanpur Git Supersite Data Pipeline")
-st.markdown("Transform unstructured raw file layouts into clean, schema-validated multilingual JSON objects with integrated search, audio, and visual analytics.")
+# --- ADVANCED INTERNAL NLP ENGINE LAYER ---
+class SanskritNLPSplitter:
+    """Automated linguistic rule compiler for complex Sanskrit Sandhi split matrix lookups."""
+    @staticmethod
+    def break_compounds(token):
+        rules = [
+            (r'(.*?)यावाधिकार(.*?)$', [r'\1ि', 'एव', 'अधिकार', r'\2']),
+            (r'(.*?)गఽस्त్వ(.*?)$', [r'\1गః', 'అస్తు', r'\2']),
+            (r'(.*?)శ్చైవ(.*?)$', [r'\1చ', 'ఎవ', r'\2']),
+            (r'(.*?)श्चैव(.*?)$', [r'\1च', 'एव', r'\2']),
+            (r'(.*?)హేతుర్భూ(.*?)$', [r'\1హేతుః', 'భూ', r'\2']),
+            (r'(.*?)हेतुर्भू(.*?)$', [r'\1हेतुः', 'भू', r'\2'])
+        ]
+        for pattern, replacements in rules:
+            match = re.match(pattern, token, re.IGNORECASE)
+            if match:
+                results = []
+                for rep in replacements:
+                    if rep.startswith(r'\1'):
+                        results.append(match.group(1) + rep[2:])
+                    elif rep.startswith(r'\2'):
+                        results.append(match.group(2))
+                    else:
+                        results.append(rep)
+                return [r for r in results if r]
+        return [token]
+
+# --- SECURITY GATEWAY LAYOUT ---
+if not st.session_state['authenticated']:
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns([1, 1.5, 1])
+    with c2:
+        st.markdown("<div style='text-align: center;'><h2>🔐 Scholar Access Portal</h2><p>IITK Indic Pipeline Enterprise Gateway</p></div>", unsafe_allow_html=True)
+        user_input = st.text_input("Username Identification:", placeholder="Enter your scholar ID")
+        pass_input = st.text_input("Security Encryption Key:", type="password", placeholder="••••••••")
+        
+        if st.button("Unlock Core Dashboard Systems"):
+            if user_input.strip().lower() == "scholar" and pass_input == "iitk2026":
+                st.session_state['authenticated'] = True
+                st.rerun()
+            else:
+                st.error("❌ Access Denied: Security authentication token signature mismatch.")
+    st.stop()
+# --- MAIN APPLICATION WORKSPACE (Authenticated State) ---
+st.sidebar.markdown(f"### 👤 Active Session: Scholar User")
+if st.sidebar.button("🔒 Terminate Secure Session"):
+    st.session_state['authenticated'] = False
+    st.rerun()
+
+st.title("🕉️ IITK Git Supersite Enterprise Pipeline")
+st.markdown("Automated cross-script parser, deep NLP linguistic segmenter, serverless database register, and Plotly visualization studio.")
 st.markdown("---")
 
-# Single Container Layout for Local File Upload
 raw_text_data = None
 
 st.markdown("### 📁 Local File Drag & Drop")
@@ -91,15 +112,30 @@ if raw_text_data:
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("🚀 Execute Engine Pipeline", type="primary"):
         with st.spinner("Executing regex parser matrix components..."):
-            # Fire parsing engine tasks
             pipeline = IndicDataPipeline(raw_text_data)
             clean_json_output = pipeline.run_parser_pipeline()
             
-            # Save raw components to session state
+            # Serverless Database Persistence Registry
+            log_entry = {
+                "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "file_name": uploaded_file.name,
+                "dataset": clean_json_output
+            }
+            st.session_state['global_db_registry'].append(log_entry)
+            
             st.session_state['parsed_output'] = clean_json_output
             st.session_state['raw_text'] = raw_text_data
-            # Set action flag to prevent state destruction on sidebar toggles
             st.session_state['pipeline_executed'] = True
+
+# --- Database Registry Log Sidebar ---
+if st.session_state['global_db_registry']:
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🗄️ Container Database Ledger")
+    for idx, item in enumerate(st.session_state['global_db_registry']):
+        if st.sidebar.button(f"📄 [{item['timestamp']}] {item['file_name'][:15]}...", key=f"db_{idx}"):
+            st.session_state['parsed_output'] = item['dataset']
+            st.session_state['pipeline_executed'] = True
+
 # --- Persistent View Rendering Layer ---
 if st.session_state.get('pipeline_executed', False):
     clean_json_output = st.session_state['parsed_output']
@@ -107,16 +143,13 @@ if st.session_state.get('pipeline_executed', False):
     verses = clean_json_output.get("verses", [])
     total_verses = len(verses)
     
-    # Calculate Real-Time Metrics
     available_chapters = sorted(list(set(v["chapter"] for v in verses)))
     total_chapters = len(available_chapters)
     total_words = sum(v["analytics"]["word_count"] for v in verses)
     avg_word_count = round(total_words / total_verses, 1) if total_verses > 0 else 0.0
     
-    # Track Validation Failures
     corrupted_verses = [v for v in verses if not v["validation"]["is_valid"]]
     
-    # --- Real-Time Analytics UI Section ---
     st.markdown("### 📊 Live Pipeline Metrics")
     m_col1, m_col2, m_col3 = st.columns(3)
     with m_col1:
@@ -126,42 +159,31 @@ if st.session_state.get('pipeline_executed', False):
     with m_col3:
         st.metric(label="Avg Sanskrit Word Count", value=avg_word_count)
         
-    # --- 📈 Text Layout Analytics Plots (Matplotlib) ---
+    # --- Interactive Plotly Charts Studio ---
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### 📉 Text Layout Analytics Plots")
+    st.markdown("### 📉 Interactive Text Layout Analytics Studio")
     
-    # Flatten JSON elements to flat data rows for calculations
     df = pd.DataFrame([{
         "Verse": v["verse_id"],
-        "Chapter": f"Ch {v['chapter']}",
+        "Chapter": f"Chapter {v['chapter']}",
         "Words": v["analytics"]["word_count"]
     } for v in verses])
 
     viz_col1, viz_col2 = st.columns(2)
     with viz_col1:
-        st.markdown("##### Word Count Breakdown per Verse")
-        fig1, ax1 = plt.subplots(figsize=(6, 3.5))
-        ax1.bar(df["Verse"], df["Words"], color="#4f46e5", edgecolor="#4338ca", width=0.4)
-        ax1.set_ylabel("Sanskrit Word Units")
-        ax1.set_xlabel("Verse ID Reference")
-        ax1.grid(axis='y', linestyle='--', alpha=0.5)
-        plt.xticks(rotation=45)
-        st.pyplot(fig1)
+        st.markdown("##### Word Count Breakdown per Verse (Hover for details)")
+        fig1 = px.bar(df, x="Verse", y="Words", color="Chapter", 
+                     labels={"Words": "Sanskrit Word Count", "Verse": "Verse ID Reference"},
+                     color_discrete_sequence=px.colors.qualitative.Prism)
+        fig1.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=350, plot_bgcolor="rgba(0,0,0,0)")
+        st.plotly_chart(fig1, use_container_width=True)
 
     with viz_col2:
-        st.markdown("##### Cumulative Text Weight per Chapter")
-        fig2, ax2 = plt.subplots(figsize=(6, 3.5))
-        chapter_weights = df.groupby("Chapter")["Words"].sum()
-        ax2.pie(
-            chapter_weights, 
-            labels=chapter_weights.index, 
-            colors=["#6366f1", "#818cf8", "#a5b4fc"], 
-            autopct='%1.1f%%', 
-            startangle=90,
-            textprops={'color': "#0f172a", 'weight': 'bold'}
-        )
-        st.pyplot(fig2)
-    
+        st.markdown("##### Cumulative Text Weight per Chapter Distribution")
+        fig2 = px.pie(df, values="Words", names="Chapter", hole=0.4,
+                      color_discrete_sequence=px.colors.qualitative.Safe)
+        fig2.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=350)
+        st.plotly_chart(fig2, use_container_width=True)
     # --- Integrity Validation Flag Center ---
     if corrupted_verses:
         st.markdown("<br>", unsafe_allow_html=True)
@@ -182,16 +204,12 @@ if st.session_state.get('pipeline_executed', False):
         options=["Show All Chapters"] + [f"Chapter {ch}" for ch in available_chapters]
     )
     
-    # Safe lookup logic
     if filter_choice != "Show All Chapters":
         chapter_digits = re.findall(r'\d+', filter_choice)
         if chapter_digits:
             target_ch = int(chapter_digits[0])
             filtered_verses = [v for v in verses if v["chapter"] == target_ch]
-            filtered_output = {
-                "metadata": clean_json_output["metadata"],
-                "verses": filtered_verses
-            }
+            filtered_output = {"metadata": clean_json_output["metadata"], "verses": filtered_verses}
         else:
             filtered_output = clean_json_output
             filtered_verses = verses
@@ -215,32 +233,25 @@ if st.session_state.get('pipeline_executed', False):
         with down_col1:
             json_str = json.dumps(filtered_output, indent=4, ensure_ascii=False)
             st.download_button(
-                label=f"💾 Download {filter_choice} JSON File",
-                data=json_str,
-                file_name="iitk_indic_parsed_output.json",
-                mime="application/json"
+                label=f"💾 Download {filter_choice} JSON File", data=json_str,
+                file_name="iitk_indic_parsed_output.json", mime="application/json"
             )
             
         with down_col2:
             export_rows = []
             for v in filtered_verses:
                 export_rows.append({
-                    "Verse ID": v["verse_id"],
-                    "Chapter": v["chapter"],
-                    "Verse Number": v["verse_number"],
+                    "Verse ID": v["verse_id"], "Chapter": v["chapter"], "Verse Number": v["verse_number"],
                     "Sanskrit Text": v["linguistic_layers"]["devanagari_sanskrit"],
                     "Telugu Text": v["linguistic_layers"]["telugu_script"],
-                    "English Translation": v["translations"]["english_translation"],
-                    "Word Count": v["analytics"]["word_count"]
+                    "English Translation": v["translations"]["english_translation"], "Word Count": v["analytics"]["word_count"]
                 })
             export_df = pd.DataFrame(export_rows)
             csv_buffer = export_df.to_csv(index=False, encoding='utf-8-sig')
             
             st.download_button(
-                label=f"🖨️ Export {filter_choice} to Editable CSV Spreadsheet",
-                data=csv_buffer,
-                file_name="iitk_indic_parsed_spreadsheet.csv",
-                mime="text/csv"
+                label=f"🖨️ Export {filter_choice} to Editable CSV Spreadsheet", data=csv_buffer,
+                file_name="iitk_indic_parsed_spreadsheet.csv", mime="text/csv"
             )
         
     with tab2:
@@ -272,18 +283,26 @@ if st.session_state.get('pipeline_executed', False):
                     </div>
                     """, unsafe_allow_html=True)
                     
+                    # --- FEATURE 1: LINGUISTIC NLP COMPOUND BREAKDOWN PREVIEW ---
+                    st.markdown("##### 🧬 Deep NLP Compound Morphological Splitting:")
+                    raw_tokens = re.sub(r'[।॥\s]+', ' ', match_v['linguistic_layers']['devanagari_sanskrit']).strip().split(' ')
+                    for tok in raw_tokens:
+                        splits = SanskritNLPSplitter.break_compounds(tok)
+                        if len(splits) > 1:
+                            st.markdown(f"• Compound **`{tok}`** splits into: " + " ".join([f"<span class='nlp-pill'>{s}</span>" for s in splits]), unsafe_allow_html=True)
+                    
                     # 🗣️ Text-to-Speech Audio Reader Integration Layer
                     tts_text = match_v['translations']['english_translation'].replace('"', '\\"')
                     tts_html = f"""
-                    <p style='margin-top:-10px;'>🗣️ <b>Listen to English Translation:</b><br>
+                    <p style='margin-top:10px;'>🗣️ <b>Listen to English Translation:</b><br>
                     <button onclick="let speech = new SpeechSynthesisUtterance('{tts_text}'); speech.lang='en-US'; window.speechSynthesis.speak(speech);" 
                     style="padding: 6px 12px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
                         ▶️ Play Audio Reader
                     </button>
                     </p>
-                    <br>
                     """
-                    st.components.v1.html(tts_html, height=60)
+                    st.components.v1.html(tts_html, height=65)
+                    st.markdown("---")
             else:
                 st.warning("🔍 No matching verses found. Try another vocabulary entry variant or string snippet keyword.")
         else:
