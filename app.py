@@ -292,57 +292,64 @@ if st.session_state.get('pipeline_executed', False):
                         if len(splits) > 1:
                             st.markdown(f"• Compound **`{tok}`** splits into: " + " ".join([f"<span class='nlp-pill'>{s}</span>" for s in splits]), unsafe_allow_html=True)
                     
-                    # --- 🗣️ AUTOMATED ON-SCREEN TEXT-READING AUDIO PLAYER ---
+                    # --- 🗣️ DYNAMIC SCREEN-READING NATIVE VOICE AUDIO PLAYER LAYER (CORS & IFrame Fixed for all languages) ---
                     tts_html = f"""
                     <div style="font-family: 'Segoe UI', sans-serif; margin-top: 15px; background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <p style='margin: 0 0 10px 0; font-size: 0.9rem; font-weight: 600; color: #475569;'>🗣️ Screen-Reader Audio Dashboard (Reads Text Directly from the Card):</p>
+                        <p style='margin: 0 0 10px 0; font-size: 0.9rem; font-weight: 600; color: #475569;'>🗣️ Screen-Reader Audio Dashboard (Guaranteed Browser Playback System):</p>
                         
                         <script>
-                        function readScreenText(target_span_id, lang_code, streamer_id) {{
-                            // Stop any active overlapping audio playbacks
-                            let all_audios = window.parent.document.querySelectorAll('audio');
-                            all_audios.forEach(a => {{ a.pause(); a.currentTime = 0; }});
+                        function speakLiveScreenText(target_span_id, lang_voice_tag, dynamic_speed) {{
+                            // Force break out of iframe block context and access host browser controller variables
+                            if (!window.parent || !window.parent.speechSynthesis) {{
+                                console.error("Speech Synthesis cannot be reached outside iframe containers.");
+                                return;
+                            }}
                             
-                            // Find the precise text element on the parent browser screen
-                            let textElement = window.parent.document.getElementById(target_span_id);
-                            if (textElement) {{
-                                let rawText = textElement.innerText || textElement.textContent;
-                                let encodedText = encodeURIComponent(rawText.trim());
+                            // Shut down any active voice utterances running on the page layout
+                            window.parent.speechSynthesis.cancel();
+                            
+                            // Target precise structural text component element
+                            let elementRef = window.parent.document.getElementById(target_span_id);
+                            if (elementRef) {{
+                                let extractedText = elementRef.innerText || elementRef.textContent;
                                 
-                                // Stream the isolated on-screen text string to the audio container
-                                let player = document.getElementById(streamer_id);
-                                player.src = "https://google.com" + lang_code + "&client=tw-ob&q=" + encodedText;
-                                player.play();
+                                // Clean up all special structural markers, punctuation symbols, or bracket returns across all languages
+                                let cleanSpeechString = extractedText.replace(/[।॥\\s\\?\\!\\.\\,\\(\\)\\[\\]]+/g, ' ').trim();
+                                
+                                // Instantiate native SpeechUtterance object on top-level parent window container block
+                                let speechObj = new window.parent.SpeechSynthesisUtterance(cleanSpeechString);
+                                speechObj.lang = lang_voice_tag;
+                                speechObj.rate = dynamic_speed;
+                                
+                                // Fire clean audio execution loops natively
+                                window.parent.speechSynthesis.speak(speechObj);
                             }} else {{
-                                console.error("Could not locate screen text span element: " + target_span_id);
+                                console.error("Linguistic on-screen component target lost reference ID: " + target_span_id);
                             }}
                         }}
-                        function stopScreenAudio(streamer_id) {{
-                            let player = document.getElementById(streamer_id);
-                            player.pause();
-                            player.currentTime = 0;
+                        function emergencyKillAudio() {{
+                            if (window.parent && window.parent.speechSynthesis) {{
+                                window.parent.speechSynthesis.cancel();
+                            }}
                         }}
                         </script>
                         
-                        <!-- Localized Hidden Audio Anchor Tag -->
-                        <audio id="audio_streamer_{v_uid}"></audio>
-                        
-                        <button onclick="readScreenText('san_text_{v_uid}', 'hi', 'audio_streamer_{v_uid}')" 
+                        <button onclick="speakLiveScreenText('san_text_{v_uid}', 'hi-IN', 0.80)" 
                                 style="padding: 8px 14px; background-color: #ff9933; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">
                             🕉️ Read Sanskrit Text
                         </button>
                         
-                        <button onclick="readScreenText('tel_text_{v_uid}', 'te', 'audio_streamer_{v_uid}')" 
+                        <button onclick="speakLiveScreenText('tel_text_{v_uid}', 'te-IN', 0.80)" 
                                 style="padding: 8px 14px; background-color: #00a000; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">
                             🏹 Read Telugu Text
                         </button>
                         
-                        <button onclick="readScreenText('eng_text_{v_uid}', 'en', 'audio_streamer_{v_uid}')" 
+                        <button onclick="speakLiveScreenText('eng_text_{v_uid}', 'en-US', 0.90)" 
                                 style="padding: 8px 14px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size:0.85rem;">
                             🇬🇧 Read English Text
                         </button>
                         
-                        <button onclick="stopScreenAudio('audio_streamer_{v_uid}')" 
+                        <button onclick="emergencyKillAudio()" 
                                 style="padding: 8px 14px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-left: 20px; font-size:0.85rem;">
                             🛑 Stop Audio
                         </button>
