@@ -84,7 +84,7 @@ with col2:
 if raw_text_data:
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("🚀 Execute Engine Pipeline", type="primary"):
-        with St.spinner("Executing regex parser matrix components..."):
+        with st.spinner("Executing regex parser matrix components..."):
             pipeline = IndicDataPipeline(raw_text_data)
             clean_json_output = pipeline.run_parser_pipeline()
             
