@@ -207,7 +207,7 @@ if st.session_state.get('pipeline_executed', False):
     if filter_choice != "Show All Chapters":
         chapter_digits = re.findall(r'\d+', filter_choice)
         if chapter_digits:
-            target_ch = int(chapter_digits[0])
+            target_ch = int(chapter_digits)
             filtered_verses = [v for v in verses if v["chapter"] == target_ch]
             filtered_output = {"metadata": clean_json_output["metadata"], "verses": filtered_verses}
         else:
@@ -291,28 +291,31 @@ if st.session_state.get('pipeline_executed', False):
                         if len(splits) > 1:
                             st.markdown(f"• Compound **`{tok}`** splits into: " + " ".join([f"<span class='nlp-pill'>{s}</span>" for s in splits]), unsafe_allow_html=True)
                     
-                    # 🗣️ NEW MULTILINGUAL TEXT-TO-SPEECH LAYER 
-                    # Escaping text inputs to bypass HTML syntax breaks
-                    san_clean = match_v['linguistic_layers']['devanagari_sanskrit'].replace("'", "\\'")
-                    tel_clean = match_v['linguistic_layers']['telugu_script'].replace("'", "\\'")
-                    eng_clean = match_v['translations']['english_translation'].replace("'", "\\'")
+                    # 🗣️ DYNAMIC PARENT-WINDOW AUDIO PLAYER LAYER (Bypasses Frame Restrictions)
+                    san_clean = match_v['linguistic_layers']['devanagari_sanskrit'].replace("'", "\\'").replace('"', '\\"')
+                    tel_clean = match_v['linguistic_layers']['telugu_script'].replace("'", "\\'").replace('"', '\\"')
+                    eng_clean = match_v['translations']['english_translation'].replace("'", "\\'").replace('"', '\\"')
                     
                     tts_html = f"""
                     <div style="font-family: 'Segoe UI', sans-serif; margin-top: 15px; background-color: #ffffff; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <p style='margin: 0 0 8px 0; font-size: 0.9rem; font-weight: 600; color: #475569;'>🗣️ Multilingual Audio Reader:</p>
-                        <button onclick="window.speechSynthesis.cancel(); let s = new SpeechSynthesisUtterance('{san_clean}'); s.lang='hi-IN'; s.rate=0.85; window.speechSynthesis.speak(s);" 
+                        <p style='margin: 0 0 8px 0; font-size: 0.9rem; font-weight: 600; color: #475569;'>🗣️ Multilingual Audio Reader (Bypasses IFrame Mutes):</p>
+                        
+                        <button onclick="window.parent.speechSynthesis.cancel(); let s = new window.parent.SpeechSynthesisUtterance('{san_clean}'); s.lang='hi-IN'; s.rate=0.80; window.parent.speechSynthesis.speak(s);" 
                                 style="padding: 6px 12px; background-color: #ff9933; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px;">
                             🕉️ Play Sanskrit (hi-IN)
                         </button>
-                        <button onclick="window.speechSynthesis.cancel(); let s = new SpeechSynthesisUtterance('{tel_clean}'); s.lang='te-IN'; s.rate=0.85; window.speechSynthesis.speak(s);" 
+                        
+                        <button onclick="window.parent.speechSynthesis.cancel(); let s = new window.parent.SpeechSynthesisUtterance('{tel_clean}'); s.lang='te-IN'; s.rate=0.80; window.parent.speechSynthesis.speak(s);" 
                                 style="padding: 6px 12px; background-color: #00a000; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px;">
                             🏹 Play Telugu (te-IN)
                         </button>
-                        <button onclick="window.speechSynthesis.cancel(); let s = new SpeechSynthesisUtterance('{eng_clean}'); s.lang='en-US'; s.rate=0.95; window.speechSynthesis.speak(s);" 
+                        
+                        <button onclick="window.parent.speechSynthesis.cancel(); let s = new window.parent.SpeechSynthesisUtterance('{eng_clean}'); s.lang='en-US'; s.rate=0.90; window.parent.speechSynthesis.speak(s);" 
                                 style="padding: 6px 12px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
                             🇬🇧 Play English (en-US)
                         </button>
-                        <button onclick="window.speechSynthesis.cancel();" 
+                        
+                        <button onclick="window.parent.speechSynthesis.cancel();" 
                                 style="padding: 6px 12px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-left: 15px;">
                             🛑 Stop Audio
                         </button>
