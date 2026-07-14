@@ -197,6 +197,19 @@ if st.session_state.get('pipeline_executed', False):
         st.markdown("<br>", unsafe_allow_html=True)
         st.success("💯 Integrity Check Passed: Zero data dropouts or blank translation slots discovered.")
 
+    # --- Integrity Validation Flag Center ---
+    if corrupted_verses:
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.error(f"⚠️ Validation Warning: Found {len(corrupted_verses)} structural data anomalies during parse run.")
+        with st.expander("🔍 Click to Inspect Flagged Integrity Anomalies"):
+            for bad_v in corrupted_verses:
+                st.warning(f"**ID: {bad_v['verse_id']}** (Chapter {bad_v['chapter']}, Verse {bad_v['verse_number']})")
+                for issue in bad_v["validation"]["flagged_issues"]:
+                    st.write(f"• {issue}")
+    else:
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.success("💯 Integrity Check Passed: Zero data dropouts or blank translation slots discovered.")
+
     # --- Interactive Filtering Sidebar Component ---
     st.sidebar.markdown("### 🔍 Chapter Lookup Engine")
     filter_choice = st.sidebar.selectbox(
@@ -204,10 +217,11 @@ if st.session_state.get('pipeline_executed', False):
         options=["Show All Chapters"] + [f"Chapter {ch}" for ch in available_chapters]
     )
     
+    # Safe lookup logic isolating the first element of the regex results list
     if filter_choice != "Show All Chapters":
         chapter_digits = re.findall(r'\d+', filter_choice)
         if chapter_digits:
-            target_ch = int(chapter_digits)
+            target_ch = int(chapter_digits[0])
             filtered_verses = [v for v in verses if v["chapter"] == target_ch]
             filtered_output = {"metadata": clean_json_output["metadata"], "verses": filtered_verses}
         else:
