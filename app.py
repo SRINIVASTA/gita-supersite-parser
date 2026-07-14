@@ -8,7 +8,6 @@ import plotly.express as px
 try:
     from pipeline import IndicDataPipeline
 except ImportError:
-    # Fallback placeholder if pipeline.py is missing during compilation
     class IndicDataPipeline:
         def __init__(self, text): self.raw_input = text
         def run_parser_pipeline(self): return {"metadata": {"status": "Fallback"}, "verses": []}
@@ -21,7 +20,6 @@ if 'global_db_registry' not in st.session_state:
     st.session_state['global_db_registry'] = []
 if 'authenticated' not in st.session_state:
     st.session_state['authenticated'] = False
-
 # --- Custom Dashboard CSS Styling Layer ---
 st.markdown("""
     <style>
@@ -40,7 +38,6 @@ st.markdown("""
     .nlp-pill { background-color: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; display: inline-block; margin: 4px; }
     </style>
 """, unsafe_allow_html=True)
-
 # --- ADVANCED INTERNAL NLP ENGINE LAYER ---
 class SanskritNLPSplitter:
     """Automated linguistic rule compiler for complex Sanskrit Sandhi split matrix lookups."""
@@ -95,39 +92,25 @@ st.markdown("Automated cross-script parser, deep NLP linguistic segmenter, serve
 st.markdown("---")
 
 raw_text_data = None
-
 st.markdown("### 📁 Local File Drag & Drop")
-uploaded_file = st.file_uploader(
-    "Choose your unstructured text file (.txt):", 
-    type=['txt'],
-    help="Upload files directly from your workspace directory disk storage."
-)
+uploaded_file = st.file_uploader("Choose your unstructured text file (.txt):", type=['txt'])
 
 if uploaded_file is not None:
     raw_text_data = uploaded_file.getvalue().decode("utf-8")
     st.success("✅ Local file verified and uploaded successfully!")
 
-# --- Processing Runtime Layer ---
 if raw_text_data:
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("🚀 Execute Engine Pipeline", type="primary"):
         with st.spinner("Executing regex parser matrix components..."):
             pipeline = IndicDataPipeline(raw_text_data)
             clean_json_output = pipeline.run_parser_pipeline()
-            
-            # Serverless Database Persistence Registry
-            log_entry = {
-                "timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "file_name": uploaded_file.name,
-                "dataset": clean_json_output
-            }
+            log_entry = {"timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S"), "file_name": uploaded_file.name, "dataset": clean_json_output}
             st.session_state['global_db_registry'].append(log_entry)
-            
             st.session_state['parsed_output'] = clean_json_output
             st.session_state['raw_text'] = raw_text_data
             st.session_state['pipeline_executed'] = True
 
-# --- Database Registry Log Sidebar ---
 if st.session_state['global_db_registry']:
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 🗄️ Container Database Ledger")
@@ -136,221 +119,131 @@ if st.session_state['global_db_registry']:
             st.session_state['parsed_output'] = item['dataset']
             st.session_state['pipeline_executed'] = True
 
-# --- Persistent View Rendering Layer ---
 if st.session_state.get('pipeline_executed', False):
     clean_json_output = st.session_state['parsed_output']
     raw_text_data = st.session_state['raw_text']
     verses = clean_json_output.get("verses", [])
     total_verses = len(verses)
-    
     available_chapters = sorted(list(set(v["chapter"] for v in verses)))
     total_chapters = len(available_chapters)
     total_words = sum(v["analytics"]["word_count"] for v in verses)
     avg_word_count = round(total_words / total_verses, 1) if total_verses > 0 else 0.0
-    
     corrupted_verses = [v for v in verses if not v["validation"]["is_valid"]]
     
     st.markdown("### 📊 Live Pipeline Metrics")
     m_col1, m_col2, m_col3 = st.columns(3)
-    with m_col1:
-        st.metric(label="Total Verses Parsed", value=total_verses)
-    with m_col2:
-        st.metric(label="Unique Chapters Found", value=total_chapters)
-    with m_col3:
-        st.metric(label="Avg Sanskrit Word Count", value=avg_word_count)
-    # --- Interactive Plotly Charts Studio ---
+    with m_col1: st.metric(label="Total Verses Parsed", value=total_verses)
+    with m_col2: st.metric(label="Unique Chapters Found", value=total_chapters)
+    with m_col3: st.metric(label="Avg Sanskrit Word Count", value=avg_word_count)
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 📉 Interactive Text Layout Analytics Studio")
-    
-    df = pd.DataFrame([{
-        "Verse": v["verse_id"],
-        "Chapter": f"Chapter {v['chapter']}",
-        "Words": v["analytics"]["word_count"]
-    } for v in verses])
-
+    df = pd.DataFrame([{"Verse": v["verse_id"], "Chapter": f"Chapter {v['chapter']}", "Words": v["analytics"]["word_count"]} for v in verses])
     viz_col1, viz_col2 = st.columns(2)
     with viz_col1:
         st.markdown("##### Word Count Breakdown per Verse (Hover for details)")
-        fig1 = px.bar(df, x="Verse", y="Words", color="Chapter", 
-                     labels={"Words": "Sanskrit Word Count", "Verse": "Verse ID Reference"},
-                     color_discrete_sequence=px.colors.qualitative.Prism)
+        fig1 = px.bar(df, x="Verse", y="Words", color="Chapter", labels={"Words": "Sanskrit Word Count", "Verse": "Verse ID Reference"}, color_discrete_sequence=px.colors.qualitative.Prism)
         fig1.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=350, plot_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig1, use_container_width=True)
-
     with viz_col2:
         st.markdown("##### Cumulative Text Weight per Chapter Distribution")
-        fig2 = px.pie(df, values="Words", names="Chapter", hole=0.4,
-                      color_discrete_sequence=px.colors.qualitative.Safe)
+        fig2 = px.pie(df, values="Words", names="Chapter", hole=0.4, color_discrete_sequence=px.colors.qualitative.Safe)
         fig2.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=350)
         st.plotly_chart(fig2, use_container_width=True)
 
-    # --- Integrity Validation Flag Center ---
     if corrupted_verses:
         st.markdown("<br>", unsafe_allow_html=True)
         st.error(f"⚠️ Validation Warning: Found {len(corrupted_verses)} structural data anomalies during parse run.")
         with st.expander("🔍 Click to Inspect Flagged Integrity Anomalies"):
             for bad_v in corrupted_verses:
                 st.warning(f"**ID: {bad_v['verse_id']}** (Chapter {bad_v['chapter']}, Verse {bad_v['verse_number']})")
-                for issue in bad_v["validation"]["flagged_issues"]:
-                    st.write(f"• {issue}")
+                for issue in bad_v["validation"]["flagged_issues"]: st.write(f"• {issue}")
     else:
         st.markdown("<br>", unsafe_allow_html=True)
         st.success("💯 Integrity Check Passed: Zero data dropouts or blank translation slots discovered.")
 
-    # --- Interactive Filtering Sidebar Component ---
     st.sidebar.markdown("### 🔍 Chapter Lookup Engine")
-    filter_choice = st.sidebar.selectbox(
-        "Filter Preview Database By Chapter:",
-        options=["Show All Chapters"] + [f"Chapter {ch}" for ch in available_chapters]
-    )
-    
+    filter_choice = st.sidebar.selectbox("Filter Preview Database By Chapter:", options=["Show All Chapters"] + [f"Chapter {ch}" for ch in available_chapters])
     if filter_choice != "Show All Chapters":
         chapter_digits = re.findall(r'\d+', filter_choice)
         if chapter_digits:
             target_ch = int(chapter_digits[0])
             filtered_verses = [v for v in verses if v["chapter"] == target_ch]
             filtered_output = {"metadata": clean_json_output["metadata"], "verses": filtered_verses}
-        else:
-            filtered_output = clean_json_output
-            filtered_verses = verses
-    else:
-        filtered_output = clean_json_output
-        filtered_verses = verses
-
+        else: filtered_output = clean_json_output; filtered_verses = verses
+    else: filtered_output = clean_json_output; filtered_verses = verses
     st.markdown("<br>", unsafe_allow_html=True)
-        # --- UI Organization Master Tabs ---
     tab1, tab2, tab3 = st.tabs(["📊 Interactive JSON Output", "🔎 Multi-Script Search Engine & Audio Reader", "📝 Checked Source Log"])
-    
     with tab1:
         st.markdown(f"### Schema-Validated Dataset Result ({filter_choice})")
         st.json(filtered_output)
-        
         st.markdown("---")
         st.markdown("### 🖨️ Data Exporter Utilities")
         down_col1, down_col2 = st.columns(2)
-        
         with down_col1:
             json_str = json.dumps(filtered_output, indent=4, ensure_ascii=False)
-            st.download_button(
-                label=f"💾 Download {filter_choice} JSON File", data=json_str,
-                file_name="iitk_indic_parsed_output.json", mime="application/json"
-            )
-            
+            st.download_button(label=f"💾 Download {filter_choice} JSON File", data=json_str, file_name="iitk_indic_parsed_output.json", mime="application/json")
         with down_col2:
             export_rows = []
             for v in filtered_verses:
-                export_rows.append({
-                    "Verse ID": v["verse_id"], "Chapter": v["chapter"], "Verse Number": v["verse_number"],
-                    "Sanskrit Text": v["linguistic_layers"]["devanagari_sanskrit"],
-                    "Telugu Text": v["linguistic_layers"]["telugu_script"],
-                    "English Translation": v["translations"]["english_translation"], "Word Count": v["analytics"]["word_count"]
-                })
+                export_rows.append({"Verse ID": v["verse_id"], "Chapter": v["chapter"], "Verse Number": v["verse_number"], "Sanskrit Text": v["linguistic_layers"]["devanagari_sanskrit"], "Telugu Text": v["linguistic_layers"]["telugu_script"], "English Translation": v["translations"]["english_translation"], "Word Count": v["analytics"]["word_count"]})
             export_df = pd.DataFrame(export_rows)
             csv_buffer = export_df.to_csv(index=False, encoding='utf-8-sig')
-            
-            st.download_button(
-                label=f"🖨️ Export {filter_choice} to Editable CSV Spreadsheet", data=csv_buffer,
-                file_name="iitk_indic_parsed_spreadsheet.csv", mime="text/csv"
-            )
+            st.download_button(label=f"🖨️ Export {filter_choice} to Editable CSV Spreadsheet", data=csv_buffer, file_name="iitk_indic_parsed_spreadsheet.csv", mime="text/csv")
         
     with tab2:
         st.markdown("### 🔎 Multi-Script Cross-Reference Search Engine")
-        search_query = st.text_input(
-            "Type a search word (e.g. 'battle', 'Sanjaya', 'कर्मण्यवाधिकारस्ते'):",
-            placeholder="Type any word across English translation, Telugu script, or Devanagari Sanskrit..."
-        ).strip().lower()
-        
+        search_query = st.text_input("Type a search word (e.g. 'battle', 'Sanjaya', 'कर्मण्यवाधिकारस्ते'):", placeholder="Type any word across English translation, Telugu script, or Devanagari Sanskrit...").strip().lower()
         if search_query:
             results_found = []
             for v in verses:
                 s_txt = v["linguistic_layers"]["devanagari_sanskrit"].lower()
                 t_txt = v["linguistic_layers"]["telugu_script"].lower()
                 e_txt = v["translations"]["english_translation"].lower()
-                
-                if search_query in s_txt or search_query in t_txt or search_query in e_txt:
-                    results_found.append(v)
-            
+                if search_query in s_txt or search_query in t_txt or search_query in e_txt: results_found.append(v)
             if results_found:
                 st.success(f"🎯 Found {len(results_found)} matching verse entries:")
                 for match_v in results_found:
                     v_uid = match_v['verse_id']
-                    
-                    # Split sentences into single tracker-span array elements for highlighting tracking loops
                     san_words = match_v['linguistic_layers']['devanagari_sanskrit'].split(' ')
                     tel_words = match_v['linguistic_layers']['telugu_script'].split(' ')
                     eng_words = match_v['translations']['english_translation'].split(' ')
-                    
                     san_spans = " ".join([f'<span id="san_{v_uid}_{w_idx}">{word}</span>' for w_idx, word in enumerate(san_words)])
                     tel_spans = " ".join([f'<span id="tel_{v_uid}_{w_idx}">{word}</span>' for w_idx, word in enumerate(tel_words)])
                     eng_spans = " ".join([f'<span id="eng_{v_uid}_{w_idx}">{word}</span>' for w_idx, word in enumerate(eng_words)])
+                    st.markdown(f'<div class="search-card"><h4>📌 Verse ID: {match_v["verse_id"]}</h4><p><b>Sanskrit:</b> <span id="master_san_{v_uid}">{san_spans}</span></p><p><b>Telugu:</b> <span id="master_tel_{v_uid}">{tel_spans}</span></p><p><b>English:</b> <span id="master_eng_{v_uid}">{eng_spans}</span></p></div>', unsafe_allow_html=True)
                     
-                    st.markdown(f"""
-                    <div class="search-card">
-                        <h4>📌 Verse ID: {match_v['verse_id']} (Chapter {match_v['chapter']}, Verse {match_v['verse_number']})</h4>
-                        <p><b>Sanskrit:</b> <span id="master_san_{v_uid}">{san_spans}</span></p>
-                        <p><b>Telugu:</b> <span id="master_tel_{v_uid}">{tel_spans}</span></p>
-                        <p><b>English:</b> <span id="master_eng_{v_uid}">{eng_spans}</span></p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # --- LINGUISTIC NLP COMPOUND BREAKDOWN PREVIEW ---
                     st.markdown("##### 🧬 Deep NLP Compound Morphological Splitting:")
                     raw_tokens = re.sub(r'[।॥\s]+', ' ', match_v['linguistic_layers']['devanagari_sanskrit']).strip().split(' ')
                     for tok in raw_tokens:
                         splits = SanskritNLPSplitter.break_compounds(tok)
-                        if len(splits) > 1:
-                            st.markdown(f"• Compound **`{tok}`** splits into: " + " ".join([f"<span class='nlp-pill'>{s}</span>" for s in splits]), unsafe_allow_html=True)
-                    # --- 🗣️ HYBRID DUAL-ENGINE TEXT HIGHLIGHTER & STREAMER (Guaranteed Highlight Sync for All Languages) ---
-                    # --- 🗣️ HYBRID DUAL-ENGINE TEXT HIGHLIGHTER & STREAMER (Guaranteed Highlight Sync for All Languages) ---
-                    # We use a standard Python string combined with a .replace() injection to completely prevent f-string bracket compilation crashes.
+                        if len(splits) > 1: st.markdown(f"• Compound **`{tok}`** splits into: " + " ".join([f"<span class='nlp-pill'>{s}</span>" for s in splits]), unsafe_allow_html=True)
+                    
                     raw_html_payload = """
                     <div style="font-family: 'Segoe UI', sans-serif; margin-top: 15px; background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
                         <p style='margin: 0 0 10px 0; font-size: 0.9rem; font-weight: 600; color: #475569;'>🗣️ Active Script Screen Reader & Word Highlighter Dashboard:</p>
-                        
                         <script>
-                        // Store individual global tracking timers inside the execution canvas to prevent text collisions
-                        if (typeof window.activeSpeechTimers === 'undefined') {
-                            window.activeSpeechTimers = {};
-                        }
-                        
+                        if (typeof window.activeSpeechTimers === 'undefined') { window.activeSpeechTimers = {}; }
                         function runHighlightSpeech(prefix_id, lang_code, speed_rate, highlight_color) {
                             if (!window.parent) return;
-                            
-                            // Reset any running tracking variables instantly
-                            if (window.activeSpeechTimers[prefix_id]) {
-                                clearInterval(window.activeSpeechTimers[prefix_id]);
-                            }
+                            if (window.activeSpeechTimers[prefix_id]) { clearInterval(window.activeSpeechTimers[prefix_id]); }
                             if (window.parent.speechSynthesis) window.parent.speechSynthesis.cancel();
-                            
                             let all_audios = window.parent.document.querySelectorAll('audio');
                             all_audios.forEach(a => { a.pause(); a.currentTime = 0; });
-                            
-                            // Wipe lingering highlight background colors from previous playthroughs
                             let allSpansGlobal = window.parent.document.querySelectorAll("span");
                             allSpansGlobal.forEach(s => s.style.backgroundColor = "transparent");
-                            
-                            // Target precise individual word blocks printed on screen
                             let wordSpans = window.parent.document.querySelectorAll("[id^='" + prefix_id + "_']");
                             let wordsArray = [];
-                            
                             wordSpans.forEach(span => {
                                 let cleanTxt = span.innerText || span.textContent;
-                                // Filter special structural text layout markers preventing clean audio parses
                                 cleanTxt = cleanTxt.replace(/[।॥\\?\\!\\.\\,\\(\\)\\[\\]]+/g, '').trim();
                                 wordsArray.push(cleanTxt);
                             });
-                            
                             let completeSentence = wordsArray.join(' ');
                             if (completeSentence.length === 0) return;
-                            
                             let activeWordIdx = 0;
-                            
-                            // --- DYNAMIC LINGUISTIC SPEED COEFFICIENT TRACKER ---
-                            // Configures unique time variables tailored specifically to regional pronunciation accents
-                            let msPerWord = 450 / speed_rate; // English default pace anchor
-                            if (lang_code === 'hi') msPerWord = 560 / speed_rate; // Extended vowel duration pace for Devanagari Sanskrit
-                            if (lang_code === 'te') msPerWord = 620 / speed_rate; // Agglutinative pace for complex Telugu script loops
-                            
+                            let msPerWord = 450 / speed_rate;
+                            if (lang_code === 'hi') msPerWord = 560 / speed_rate;
+                            if (lang_code === 'te') msPerWord = 620 / speed_rate;
                             function triggerWordHighlight() {
                                 if (activeWordIdx < wordSpans.length) {
                                     wordSpans.forEach(s => s.style.backgroundColor = "transparent");
@@ -366,86 +259,43 @@ if st.session_state.get('pipeline_executed', False):
                                     wordSpans.forEach(s => s.style.backgroundColor = "transparent");
                                 }
                             }
-                            
-                            // --- CO-DEPENDENT ROUTING MATRIX ---
                             if (lang_code === 'en') {
-                                // English runs via Native Client Speech Engine safely
                                 let utterance = new window.parent.SpeechSynthesisUtterance(completeSentence);
-                                utterance.lang = 'en-US';
-                                utterance.rate = speed_rate;
-                                
-                                utterance.onstart = function() {
-                                    triggerWordHighlight();
-                                    window.activeSpeechTimers[prefix_id] = setInterval(triggerWordHighlight, msPerWord);
-                                };
-                                utterance.onend = function() {
-                                    clearInterval(window.activeSpeechTimers[prefix_id]);
-                                    wordSpans.forEach(s => s.style.backgroundColor = "transparent");
-                                };
+                                utterance.lang = 'en-US'; utterance.rate = speed_rate;
+                                utterance.onstart = function() { triggerWordHighlight(); window.activeSpeechTimers[prefix_id] = setInterval(triggerWordHighlight, msPerWord); };
+                                utterance.onend = function() { clearInterval(window.activeSpeechTimers[prefix_id]); wordSpans.forEach(s => s.style.backgroundColor = "transparent"); };
                                 window.parent.speechSynthesis.speak(utterance);
                             } else {
-                                // Indic Layouts (Sanskrit & Telugu) stream via Cloud Network TTS bypassing client OS dependencies
                                 let encodedText = encodeURIComponent(completeSentence);
                                 let streamerPlayer = document.getElementById("audio_streamer_V_UID_PLACEHOLDER");
-                                
                                 streamerPlayer.src = "https://google.com" + lang_code + "&client=tw-ob&q=" + encodedText;
-                                
-                                streamerPlayer.onplay = function() {
-                                    triggerWordHighlight();
-                                    window.activeSpeechTimers[prefix_id] = setInterval(triggerWordHighlight, msPerWord);
-                                };
-                                streamerPlayer.onended = function() {
-                                    clearInterval(window.activeSpeechTimers[prefix_id]);
-                                    wordSpans.forEach(s => s.style.backgroundColor = "transparent");
-                                };
-                                streamerPlayer.play().catch(err => console.log("Streaming error event caught: ", err));
-                            }}
-                        
+                                streamerPlayer.onplay = function() { triggerWordHighlight(); window.activeSpeechTimers[prefix_id] = setInterval(triggerWordHighlight, msPerWord); };
+                                streamerPlayer.onended = function() { clearInterval(window.activeSpeechTimers[prefix_id]); wordSpans.forEach(s => s.style.backgroundColor = "transparent"); };
+                                streamerPlayer.play().catch(err => console.log("Streaming error: ", err));
+                            }
+                        }
                         function killActiveSpeech() {
-                            // Clear all active tracking arrays
                             let keys = Object.keys(window.activeSpeechTimers);
                             keys.forEach(k => clearInterval(window.activeSpeechTimers[k]));
-                            
                             if (window.parent && window.parent.speechSynthesis) window.parent.speechSynthesis.cancel();
-                            
                             let streamerPlayer = document.getElementById("audio_streamer_V_UID_PLACEHOLDER");
-                            streamerPlayer.pause();
-                            streamerPlayer.currentTime = 0;
-                            
+                            streamerPlayer.pause(); streamerPlayer.currentTime = 0;
                             let allSpansGlobal = window.parent.document.querySelectorAll("span");
                             allSpansGlobal.forEach(s => s.style.backgroundColor = "transparent");
                         }
                         </script>
-                        
-                        <!-- Standalone Hidden Audio Component Hook -->
                         <audio id="audio_streamer_V_UID_PLACEHOLDER" crossOrigin="anonymous"></audio>
-                        
-                        <button onclick="runHighlightSpeech('san_V_UID_PLACEHOLDER', 'hi', 0.80, '#ffebd5')" 
-                                style="padding: 8px 14px; background-color: #ff9933; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">
-                            🕉️ Read Sanskrit Text
-                        </button>
-                        
-                        <button onclick="runHighlightSpeech('tel_V_UID_PLACEHOLDER', 'te', 0.75, '#dcfce7')" 
-                                style="padding: 8px 14px; background-color: #00a000; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">
-                            🏹 Read Telugu Text
-                        </button>
-                        
-                        <button onclick="runHighlightSpeech('eng_V_UID_PLACEHOLDER', 'en', 0.90, '#e0e7ff')" 
-                                style="padding: 8px 14px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size:0.85rem;">
-                            🇬🇧 Read English Text
-                        </button>
-                        
-                        <button onclick="killActiveSpeech()" 
-                                style="padding: 8px 14px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-left: 20px; font-size:0.85rem;">
-                            🛑 Stop Audio
-                        </button>
+                        <button onclick="runHighlightSpeech('san_V_UID_PLACEHOLDER', 'hi', 0.80, '#ffebd5')" style="padding: 8px 14px; background-color: #ff9933; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">🕉️ Read Sanskrit Text</button>
+                        <button onclick="runHighlightSpeech('tel_V_UID_PLACEHOLDER', 'te', 0.75, '#dcfce7')" style="padding: 8px 14px; background-color: #00a000; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">🏹 Read Telugu Text</button>
+                        <button onclick="runHighlightSpeech('eng_V_UID_PLACEHOLDER', 'en', 0.90, '#e0e7ff')" style="padding: 8px 14px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size:0.85rem;">🇬🇧 Read English Text</button>
+                        <button onclick="killActiveSpeech()" style="padding: 8px 14px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-left: 20px; font-size:0.85rem;">🛑 Stop Audio</button>
+                    </div>
                     """
-                    st.components.v1.html(tts_html, height=85)
+                    tts_html = raw_html_payload.replace("V_UID_PLACEHOLDER", v_uid)
+                    st.components.v1.html(tts_html, height=110)
                     st.markdown("---")
-            else:
-                st.warning("🔍 No matching verses found. Try another vocabulary entry variant or string snippet keyword.")
-        else:
-            st.info("💡 Enter a string value keyword above to filter across your entire structural text database instantaneously.")
+            else: st.warning("🔍 No matching verses found. Try another vocabulary word.")
+        else: st.info("💡 Enter a string value keyword above to filter across your entire structural text database instantaneously.")
             
     with tab3:
         st.markdown("### System Log: Raw Plaintext String Preview")
