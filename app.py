@@ -210,6 +210,19 @@ if st.session_state.get('pipeline_executed', False):
         st.markdown("<br>", unsafe_allow_html=True)
         st.success("💯 Integrity Check Passed: Zero data dropouts or blank translation slots discovered.")
 
+    # --- Integrity Validation Flag Center ---
+    if corrupted_verses:
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.error(f"⚠️ Validation Warning: Found {len(corrupted_verses)} structural data anomalies during parse run.")
+        with st.expander("🔍 Click to Inspect Flagged Integrity Anomalies"):
+            for bad_v in corrupted_verses:
+                st.warning(f"**ID: {bad_v['verse_id']}** (Chapter {bad_v['chapter']}, Verse {bad_v['verse_number']})")
+                for issue in bad_v["validation"]["flagged_issues"]:
+                    st.write(f"• {issue}")
+    else:
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.success("💯 Integrity Check Passed: Zero data dropouts or blank translation slots discovered.")
+
     # --- Interactive Filtering Sidebar Component ---
     st.sidebar.markdown("### 🔍 Chapter Lookup Engine")
     filter_choice = st.sidebar.selectbox(
@@ -217,7 +230,6 @@ if st.session_state.get('pipeline_executed', False):
         options=["Show All Chapters"] + [f"Chapter {ch}" for ch in available_chapters]
     )
     
-    # Safe lookup logic isolating the first element of the regex results list
     if filter_choice != "Show All Chapters":
         chapter_digits = re.findall(r'\d+', filter_choice)
         if chapter_digits:
@@ -305,37 +317,63 @@ if st.session_state.get('pipeline_executed', False):
                         if len(splits) > 1:
                             st.markdown(f"• Compound **`{tok}`** splits into: " + " ".join([f"<span class='nlp-pill'>{s}</span>" for s in splits]), unsafe_allow_html=True)
                     
-                    # 🗣️ DYNAMIC PARENT-WINDOW AUDIO PLAYER LAYER (Bypasses Frame Restrictions)
-                    san_clean = match_v['linguistic_layers']['devanagari_sanskrit'].replace("'", "\\'").replace('"', '\\"')
-                    tel_clean = match_v['linguistic_layers']['telugu_script'].replace("'", "\\'").replace('"', '\\"')
-                    eng_clean = match_v['translations']['english_translation'].replace("'", "\\'").replace('"', '\\"')
+                    # --- 🗣️ UPGRADED MULTILINGUAL CLOUD AUDIO PLAYER ---
+                    # Encodes query text parameters into URL strings to stream high-fidelity speech safely
+                    import urllib.parse
+                    san_query = urllib.parse.quote(match_v['linguistic_layers']['devanagari_sanskrit'])
+                    tel_query = urllib.parse.quote(match_v['linguistic_layers']['telugu_script'])
+                    eng_query = urllib.parse.quote(match_v['translations']['english_translation'])
+                    
+                    # Create persistent global unique identifiers to isolate audio player elements cleanly
+                    v_uid = match_v['verse_id']
                     
                     tts_html = f"""
-                    <div style="font-family: 'Segoe UI', sans-serif; margin-top: 15px; background-color: #ffffff; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <p style='margin: 0 0 8px 0; font-size: 0.9rem; font-weight: 600; color: #475569;'>🗣️ Multilingual Audio Reader (Bypasses IFrame Mutes):</p>
+                    <div style="font-family: 'Segoe UI', sans-serif; margin-top: 15px; background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <p style='margin: 0 0 10px 0; font-size: 0.9rem; font-weight: 600; color: #475569;'>🗣️ High-Fidelity Audio Reader Dashboard (Guaranteed Voice Playback):</p>
                         
-                        <button onclick="window.parent.speechSynthesis.cancel(); let s = new window.parent.SpeechSynthesisUtterance('{san_clean}'); s.lang='hi-IN'; s.rate=0.80; window.parent.speechSynthesis.speak(s);" 
-                                style="padding: 6px 12px; background-color: #ff9933; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px;">
-                            🕉️ Play Sanskrit (hi-IN)
+                        <!-- JavaScript Global Player Handlers -->
+                        <script>
+                        function playCloudAudio(player_id, query_txt, lang_code) {{
+                            // Terminate any active players to prevent overlapping voices
+                            let all_audios = document.querySelectorAll('audio');
+                            all_audios.forEach(a => {{ a.pause(); a.currentTime = 0; }});
+                            
+                            let player = document.getElementById(player_id);
+                            player.src = "https://google.com" + lang_code + "&client=tw-ob&q=" + query_txt;
+                            player.play();
+                        }}
+                        function stopCloudAudio(player_id) {{
+                            let player = document.getElementById(player_id);
+                            player.pause();
+                            player.currentTime = 0;
+                        }}
+                        </script>
+                        
+                        <!-- Hidden Audio Stream Element Container -->
+                        <audio id="audio_streamer_{v_uid}"></audio>
+                        
+                        <button onclick="playCloudAudio('audio_streamer_{v_uid}', '{san_query}', 'hi')" 
+                                style="padding: 8px 14px; background-color: #ff9933; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">
+                            🕉️ Play Sanskrit (hi)
                         </button>
                         
-                        <button onclick="window.parent.speechSynthesis.cancel(); let s = new window.parent.SpeechSynthesisUtterance('{tel_clean}'); s.lang='te-IN'; s.rate=0.80; window.parent.speechSynthesis.speak(s);" 
-                                style="padding: 6px 12px; background-color: #00a000; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px;">
-                            🏹 Play Telugu (te-IN)
+                        <button onclick="playCloudAudio('audio_streamer_{v_uid}', '{tel_query}', 'te')" 
+                                style="padding: 8px 14px; background-color: #00a000; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px; font-size:0.85rem;">
+                            🏹 Play Telugu (te)
                         </button>
                         
-                        <button onclick="window.parent.speechSynthesis.cancel(); let s = new window.parent.SpeechSynthesisUtterance('{eng_clean}'); s.lang='en-US'; s.rate=0.90; window.parent.speechSynthesis.speak(s);" 
-                                style="padding: 6px 12px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                            🇬🇧 Play English (en-US)
+                        <button onclick="playCloudAudio('audio_streamer_{v_uid}', '{eng_query}', 'en')" 
+                                style="padding: 8px 14px; background-color: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size:0.85rem;">
+                            🇬🇧 Play English (en)
                         </button>
                         
-                        <button onclick="window.parent.speechSynthesis.cancel();" 
-                                style="padding: 6px 12px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-left: 15px;">
+                        <button onclick="stopCloudAudio('audio_streamer_{v_uid}')" 
+                                style="padding: 8px 14px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-left: 20px; font-size:0.85rem;">
                             🛑 Stop Audio
                         </button>
                     </div>
                     """
-                    st.components.v1.html(tts_html, height=75)
+                    st.components.v1.html(tts_html, height=85)
                     st.markdown("---")
             else:
                 st.warning("🔍 No matching verses found. Try another vocabulary entry variant or string snippet keyword.")
