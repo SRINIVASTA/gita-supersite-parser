@@ -103,5 +103,13 @@ ENGLISH: You have a right to perform your prescribed duties, but you are not ent
 - [![Website](https://img.shields.io)/badge/Website-0052CC?style=for-the-badge&logo=website&logoColor=white)](https://srinivasta.github.io)
 
 
+* **Lead Architect & Developer:** [Srinivasta](https://github.com/SRINIVASTA)
+
+### Connect with Me
+- [![LinkedIn](https://shields.io)](https://www.linkedin.com/in/srinivas-t-a-557637119/)  
+- [![Kaggle](https://shields.io)](https://www.kaggle.com/srinivasta)  
+- [![Email](https://shields.io)](mailto:tasrinivass@gmail.com)  
+- [![GitHub](https://shields.io)](https://github.com/srinivasta)
+- [![Website](https://shields.io)](https://srinivasta.github.io)
 
 
